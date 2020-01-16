@@ -5,6 +5,7 @@ public class Graphics extends JFrame
 {
     JTextArea textArea;
     Board board;
+    Cell[][] cells;
     final int DIM = 800;
 
     Graphics(String name)
@@ -21,6 +22,11 @@ public class Graphics extends JFrame
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setSize(DIM, DIM);
         this.setVisible(true);
+    }
+
+    void setArray(Cell[][] temp)
+    {
+        this.cells = temp;
     }
 
     class Board extends JPanel
