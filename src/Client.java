@@ -6,6 +6,9 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 
+
+//TODO obsługa klawiatury + wysyłanie komunikatów
+//TODO odbieranie tablicy komórek
 public class Client
 {
     static final String IP = "127.0.0.1";
@@ -14,10 +17,12 @@ public class Client
     public static void main(String[] args)
     {
         Socket socket;
+        int counter = 1;
         do
         {
-            System.out.println("Trying to connect");
+            System.out.println("Trying to connect. Tries - " + counter);
             socket = tryConnect();
+            counter++;
         } while (!socket.isConnected());
 
         DataOutputStream dos = null;
@@ -56,7 +61,7 @@ public class Client
             sock.connect(socketAddress);
         } catch (IOException e)
         {
-            e.printStackTrace();
+            //e.printStackTrace();
         }
         return sock;
     }
