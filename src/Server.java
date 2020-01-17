@@ -1,3 +1,6 @@
+import Maze.Cell;
+import Maze.Maze;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -13,17 +16,19 @@ public class Server
     public static final int CELL_WIDTH = 10;
     public static final int CELL_HEIGTH = 15;
     static Cell[][] cells;
+    static Graphics graphics;
 
     public static void main(String[] args)
     {
-        cells = generatingCells();
+        Maze maze = new Maze(60, 30);
+        cells = maze.getCells();
         //System.out.println(cells[0].length);
         System.out.println("Server is currently running.");
         try
         {
             ServerSocket serverSocket = new ServerSocket(PORT);
             Socket socket = serverSocket.accept();
-            Graphics graphics = new Graphics("Server", cells);
+            graphics = new Graphics("Server", cells);
             Handler handler = new Handler(socket);
             handler.start();
 
@@ -32,26 +37,6 @@ public class Server
             e.printStackTrace();
         }
         System.out.println(cells.length);
-    }
-
-    static Cell[][] generatingCells()
-    {
-        Cell[][] cells = new Cell[60][30];
-        Random random = new Random();
-        for (int i = 0; i < 60; i++)
-        {
-            for (int j = 0; j < 30; j++)
-            {
-                int temp = random.nextInt(3);
-                if (temp == 0)
-                    cells[i][j] = new Cell(Cell.Type.PATH, Cell.Ocup.NOTHING, i* CELL_WIDTH, j* CELL_HEIGTH);
-                else if (temp == 1)
-                    cells[i][j] = new Cell(Cell.Type.WALL, Cell.Ocup.NOTHING, i*CELL_WIDTH, j* CELL_HEIGTH);
-                else
-                    cells[i][j] = new Cell(Cell.Type.BUSHES, Cell.Ocup.NOTHING, i*CELL_WIDTH, j* CELL_HEIGTH);
-            }
-        }
-        return cells;
     }
 
     static class Handler extends Thread
@@ -80,10 +65,16 @@ public class Server
             {
                 System.out.println(dis.readUTF());
                 dos.writeUTF("Odebrano komunikat");
-            } catch (IOException e)
+                Thread.sleep(5000);
+            } catch (IOException | InterruptedException e)
             {
                 e.printStackTrace();
             }
+
+
+            /*cells = generatingCells();
+            graphics.setArray(cells);
+            graphics.repaintBoard();*/
         }
     }
 }

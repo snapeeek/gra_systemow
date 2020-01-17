@@ -1,4 +1,6 @@
-import java.awt.*;
+package Maze;
+
+import java.awt.Point;
 
 public class Cell
 {
@@ -19,9 +21,9 @@ public class Cell
         NOTHING
     }
 
-    Type type;
-    Ocup ocup;
-    int x,y;
+    public Type type;
+    public Ocup ocup;
+    public int x,y;
 
     public Cell(Type type, Ocup ocup, int x, int y)
     {
