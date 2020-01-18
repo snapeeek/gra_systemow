@@ -20,13 +20,14 @@ public class Cell implements Serializable
         COIN,
         TREAS,
         BIGT,
+        CAMP,
         NOTHING
     }
 
-    public Type type;
-    public Ocup ocup;
+    Type type;
+    Ocup ocup;
     public int x,y;
-    public int playerNum;
+    int playerNum;
 
     public Cell(Type type, Ocup ocup, int x, int y)
     {
@@ -34,6 +35,15 @@ public class Cell implements Serializable
         this.ocup = ocup;
         this.x = x;
         this.y = y;
+    }
+
+    public Cell(Type type, Ocup ocup, int x, int y, int playerNum)
+    {
+        this.type = type;
+        this.ocup = ocup;
+        this.x = x;
+        this.y = y;
+        this.playerNum = playerNum;
     }
 
     public Type getType()

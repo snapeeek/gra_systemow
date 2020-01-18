@@ -63,11 +63,13 @@ public class Server
         int[] cords = {-2,-1,0,1,2};
         int playerNumber;
         Semaphore semaphore;
+        int carried = 0, deaths = 0;
 
         Handler(Socket socket, Semaphore sem)
         {
             this.socket = socket;
             this.semaphore = sem;
+            playerNumber = playerCount.addAndGet(1);
             try
             {
                 this.dis = new DataInputStream(socket.getInputStream());
@@ -78,7 +80,7 @@ public class Server
             }
 
             location = searchForCords();
-            playerNumber = playerCount.addAndGet(1);
+
         }
 
         @Override

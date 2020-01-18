@@ -10,6 +10,9 @@ public class MazeGenerator
     Cell[][] cells;
     public static final int CELL_WIDTH = 10;
     public static final int CELL_HEIGTH = 15;
+    private static final int HORIZONTAL = 1;
+    private static final int VERTICAL = 2;
+    private Random rand = new Random();
 
     public MazeGenerator(int x, int y)
     {
@@ -26,6 +29,29 @@ public class MazeGenerator
         }
         //Random random = new Random();
         divide(cells, 0, 0, length, width, chooseOrientation(length, width));
+
+        int bushCount = 0;
+        while (bushCount < 50)
+        {
+            int i = rand.nextInt(60);
+            int j = rand.nextInt(30);
+
+            if (cells[i][j].getType() == Cell.Type.PATH && cells[i][j].getOcup() == Cell.Ocup.NOTHING)
+            {
+                cells[i][j].setType(Cell.Type.BUSHES);
+                bushCount++;
+            }
+        }
+
+        int i, j;
+        do
+        {
+            i = rand.nextInt(60);
+            j = rand.nextInt(30);
+        } while (cells[i][j].getType() != Cell.Type.PATH || cells[i][j].getOcup() != Cell.Ocup.NOTHING);
+        cells[i][j].setOcup(Cell.Ocup.CAMP);
+
+
     }
 
     public Cell[][] getCells()
@@ -34,11 +60,7 @@ public class MazeGenerator
     }
 
 
-    private static final int HORIZONTAL = 1;
-    private static final int VERTICAL = 2;
 
-
-    private Random rand = new Random();
 
     private void divide(Cell[][] grid, int x, int y, int width, int height, int orientation)
     {

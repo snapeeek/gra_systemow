@@ -23,11 +23,11 @@ public class Graphics extends JFrame implements KeyListener
         this.cells = cells;
 
         JPanel contentPane = new JPanel();
-        contentPane.setLayout(new BorderLayout(5,5));
+        contentPane.setLayout(new BorderLayout(5, 5));
         textArea = new JTextArea();
         textArea.addKeyListener(this);
-        textArea.setSize(DIM /2,DIM/2);
-        textArea.setPreferredSize(new Dimension(60*CELL_WIDTH, 30 * CELL_HEIGHT));
+        textArea.setSize(DIM / 2, DIM / 2);
+        textArea.setPreferredSize(new Dimension(60 * CELL_WIDTH, 30 * CELL_HEIGHT));
         textArea.setEditable(false);
         textArea.setText("Witam serdecznie co sie dzieje\nskad to zwatpienie byku\npamietaj zeby ciagle isc do przodu, bo nikt za Ciebie tego nie zrobi B)");
         board = new Board();
@@ -43,10 +43,15 @@ public class Graphics extends JFrame implements KeyListener
         this.setResizable(false);
         this.setVisible(true);
     }
-
+    
     void setArray(Cell[][] temp)
     {
         this.cells = temp;
+    }
+
+    void setTextArea(String str)
+    {
+        textArea.setText(str);
     }
 
     void repaintBoard()
@@ -93,6 +98,9 @@ public class Graphics extends JFrame implements KeyListener
             case KeyEvent.VK_C:
                 com = "coin";
                 break;
+            case KeyEvent.VK_B:
+                com = "beast";
+                break;
         }
     }
 
@@ -126,41 +134,52 @@ public class Graphics extends JFrame implements KeyListener
             {
                 for (int j = 0; j < cell.length; j++)
                 {
-                    if (cell[j].type == Cell.Type.WALL)
+                    if (cell[j].getType() == Cell.Type.WALL)
                     {
                         g.setColor(Color.BLACK);
                         g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
                     }
-                    else if (cell[j].type == Cell.Type.PATH)
+                    else if (cell[j].getType() == Cell.Type.PATH)
                     {
                         g.setColor(Color.WHITE);
                         g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
-                        if (cell[j].ocup == Cell.Ocup.BEAST)
+                        if (cell[j].getOcup() == Cell.Ocup.BEAST)
                         {
                             g.setColor(Color.BLACK);
                             g.drawString("*", cell[j].x+3, cell[j].y + CELL_HEIGHT - 3);
                         }
-                        else if (cell[j].ocup == Cell.Ocup.COIN)
+                        else if (cell[j].getOcup() == Cell.Ocup.COIN)
                         {
                             g.setColor(Color.BLACK);
                             g.drawString("c", cell[j].x+3, cell[j].y + CELL_HEIGHT - 3);
                         }
-                        else if (cell[j].ocup == Cell.Ocup.TREAS)
+                        else if (cell[j].getOcup() == Cell.Ocup.TREAS)
                         {
                             g.setColor(Color.BLACK);
                             g.drawString("t", cell[j].x+3, cell[j].y + CELL_HEIGHT - 3);
                         }
-                        else if (cell[j].ocup == Cell.Ocup.BIGT)
+                        else if (cell[j].getOcup() == Cell.Ocup.BIGT)
                         {
                             g.setColor(Color.BLACK);
                             g.drawString("T", cell[j].x+3, cell[j].y + CELL_HEIGHT - 3);
                         }
-                        else
+                        else if (cell[j].getOcup() == Cell.Ocup.CAMP)
                         {
-
+                            g.setColor(Color.CYAN);
+                            g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
+                            g.setColor(Color.GRAY);
+                            g.drawString("A", cell[j].x+1, cell[j].y + CELL_HEIGHT - 3);
+                        }
+                        else if (cell[j].getOcup() == Cell.Ocup.PLAYER)
+                        {
+                            g.setColor(Color.MAGENTA);
+                            g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
+                            g.setColor(Color.yellow);
+                            String temp = String.valueOf(cell[j].getPlayerNum());
+                            g.drawString(temp, cell[j].x+2, cell[j].y + CELL_HEIGHT - 3);
                         }
                     }
-                    else if (cell[j].type == Cell.Type.BUSHES)
+                    else if (cell[j].getType() == Cell.Type.BUSHES)
                     {
                         g.setColor(Color.WHITE);
                         g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);

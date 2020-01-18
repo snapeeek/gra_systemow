@@ -24,6 +24,7 @@ public class Client extends Thread implements KeyListener
     final long period = 1000;
     Cell[][] cells;
     Point location;
+    int death = 0, carried = 0;
     String komunikat;
 
     public static void main(String[] args)
@@ -68,7 +69,7 @@ public class Client extends Thread implements KeyListener
             ObjectInputStream oos = new ObjectInputStream(socket.getInputStream());
             cells = (Cell[][])oos.readObject();
             Graphics graphics = new Graphics("Player", cells);
-
+            graphics.setTextArea("");
 
             ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
             Socket finalSocket = socket;
