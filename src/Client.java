@@ -14,7 +14,7 @@ import java.net.SocketAddress;
 
 
 //TODO obsługa klawiatury + wysyłanie komunikatów
-//TODO odbieranie tablicy komórek
+
 public class Client extends Thread implements KeyListener
 {
     final String IP = "127.0.0.1";

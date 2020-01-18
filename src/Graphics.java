@@ -3,9 +3,7 @@ import Maze.Cell;
 import javax.swing.*;
 import java.awt.*;
 
-//TODO ogarnięcie textArea troche, bo przypex
 //TODO wyświetlanie graczy, obozowiska i bestii
-//FIXME sprawdzenie czy klasa będzie działać dla gracza
 
 public class Graphics extends JFrame
 {
