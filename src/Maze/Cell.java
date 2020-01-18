@@ -1,14 +1,16 @@
 package Maze;
 
 import java.awt.Point;
+import java.io.Serializable;
 
-public class Cell
+public class Cell implements Serializable
 {
     public enum Type
     {
         PATH,
         WALL,
-        BUSHES
+        BUSHES,
+        UNSEEN
     }
 
     public enum Ocup
@@ -24,6 +26,7 @@ public class Cell
     public Type type;
     public Ocup ocup;
     public int x,y;
+    public int playerNum;
 
     public Cell(Type type, Ocup ocup, int x, int y)
     {
@@ -56,5 +59,17 @@ public class Cell
     public Point getCord()
     {
         return new Point(this.x, this.y);
+    }
+
+    public void setPlayerNum(int x)
+    {
+        this.playerNum = x;
+    }
+
+    public int getPlayerNum()
+    {
+        if (ocup == Ocup.PLAYER)
+            return playerNum;
+        else return -1;
     }
 }

@@ -78,7 +78,8 @@ public class Graphics extends JFrame
                     {
                         g.setColor(Color.BLACK);
                         g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
-                    } else if (cell[j].type == Cell.Type.PATH)
+                    }
+                    else if (cell[j].type == Cell.Type.PATH)
                     {
                         g.setColor(Color.WHITE);
                         g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
@@ -113,6 +114,11 @@ public class Graphics extends JFrame
                         g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
                         g.setColor(Color.BLACK);
                         g.drawString("#", cell[j].x+2, cell[j].y + CELL_HEIGHT - 3);
+                    }
+                    else
+                    {
+                        g.setColor(Color.GRAY);
+                        g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
                     }
                 }
             }

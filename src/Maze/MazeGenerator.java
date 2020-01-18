@@ -4,14 +4,14 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.Random;
 
-public class Maze
+public class MazeGenerator
 {
     int length, width;
     Cell[][] cells;
     public static final int CELL_WIDTH = 10;
     public static final int CELL_HEIGTH = 15;
 
-    public Maze(int x, int y)
+    public MazeGenerator(int x, int y)
     {
         this.width = x;
         this.length = y;
