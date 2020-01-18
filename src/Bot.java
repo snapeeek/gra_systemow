@@ -8,13 +8,16 @@ import java.io.ObjectInputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.Random;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
+import Maze.Cell;
 
 //TODO obsługa klawiatury + wysyłanie komunikatów
 
-public class Client extends Thread
+public class Bot extends Thread
 {
     final String IP = "127.0.0.1";
     final int PORT = 5005;
@@ -26,8 +29,8 @@ public class Client extends Thread
 
     public static void main(String[] args)
     {
-        var client = new Client();
-        client.start();
+        var bot = new Bot();
+        bot.start();
     }
 
     @Override
@@ -61,14 +64,11 @@ public class Client extends Thread
             dos.writeUTF("Komunikat");
             assert dis != null;
             System.out.println(dis.readUTF());
-            System.out.println("Bepis");
+
             location = new Point(dis.readInt(), dis.readInt());
-            System.out.println("Penis");
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-            System.out.println("Dupa");
             cells = (Cell[][]) ois.readObject();
-            System.out.println("Dupa2");
-            Graphics graphics = new Graphics("Player", cells);
+            Graphics graphics = new Graphics("Bot", cells);
             graphics.setTextArea("hello from the other program");
 
             ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
@@ -79,11 +79,19 @@ public class Client extends Thread
             {
                 try
                 {
-                    String msg = graphics.getCom();
+                    Random random = new Random();
+                    int rand = random.nextInt(4);
+                    String msg;
+                    if (rand == 0)
+                        msg = "up";
+                    else if (rand == 1)
+                        msg = "right";
+                    else if (rand == 2)
+                        msg = "down";
+                    else msg = "left";
                     System.out.println(msg);
                     finalDos.writeUTF(msg);
                     graphics.resetCom();
-                    //System.out.println("Obieram mape");
                     if (finalDis.readUTF().equals("mapa"))
                     {
                         Cell[][] temporary = (Cell[][]) ois.readUnshared();
@@ -121,3 +129,4 @@ public class Client extends Thread
         return sock;
     }
 }
+

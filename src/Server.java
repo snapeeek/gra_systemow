@@ -23,32 +23,26 @@ public class Server
     public static final int CELL_HEIGTH = 15;
     static Cell[][] cells;
     static Graphics graphics;
-    static Cell[][] fullUnseen = new Cell[60][30];
     static AtomicInteger playerCount = new AtomicInteger(0);
     static Semaphore cellsOps = new Semaphore(1);
 
-
-    public static void main(String[] args)
+    Server()
     {
         MazeGenerator mazeGenerator = new MazeGenerator(60, 30);
         cells = mazeGenerator.getCells();
 
-        for (int i = 0; i < 60; i++)
-        {
-            for (int j = 0; j < 30; j++)
-            {
-                fullUnseen[i][j] = new Cell(Cell.Type.UNSEEN, Cell.Ocup.NOTHING, i*CELL_WIDTH, j*CELL_HEIGTH);
-            }
-        }
-
         System.out.println("Server is currently running.");
         try
         {
+            graphics = new Graphics("Server", cells);
             ServerSocket serverSocket = new ServerSocket(PORT);
             Socket socket = serverSocket.accept();
-            graphics = new Graphics("Server", cells);
             Handler handler = new Handler(socket, cellsOps);
             handler.start();
+
+            Socket botsocket = serverSocket.accept();
+            Handler handler1 = new Handler(botsocket, cellsOps);
+            handler1.start();
 
         } catch (IOException e)
         {
@@ -57,7 +51,12 @@ public class Server
         System.out.println(cells.length);
     }
 
-    static class Handler extends Thread
+    public static void main(String[] args)
+    {
+        var Server = new Server();
+    }
+
+    class Handler extends Thread
     {
         final Socket socket;
         DataInputStream dis;
@@ -136,6 +135,7 @@ public class Server
                         try
                         {
                             //System.out.println("Wysylam mape");
+                            oos.reset();
                             oos.writeObject(sending.clone());
                         } catch (IOException e)
                         {
@@ -166,13 +166,7 @@ public class Server
         {
             Random random = new Random();
             int x, y;
-            try
-            {
-                semaphore.acquire();
-            } catch (InterruptedException e)
-            {
-                e.printStackTrace();
-            }
+            semaphore.tryAcquire();
             do
             {
                 x = random.nextInt(60);
@@ -188,20 +182,27 @@ public class Server
 
         Cell[][] generateChunk(Point location)
         {
-            try
+            semaphore.tryAcquire();
+            Cell[][] toSend = new Cell[60][30];
+            for (int i = 0; i < 60; i++)
             {
-                semaphore.acquire();
-            } catch (InterruptedException e)
-            {
-                e.printStackTrace();
+                for (int j = 0; j < 30; j++)
+                {
+                    toSend[i][j] = new Cell(Cell.Type.UNSEEN, Cell.Ocup.NOTHING, i * CELL_WIDTH, j * CELL_HEIGTH);
+                }
             }
-            Cell[][] toSend = fullUnseen.clone();
+
             for (int i : cords)
             {
                 for (int j : cords)
                 {
                     if (location.x + i >= 0 && location.x + i < 60 && location.y + j >= 0 && location.y + j < 30)
-                        toSend[location.x + i][location.y + j] = cells[location.x + i][location.y + j];
+                    {
+                        toSend[location.x + i][location.y + j].setType(cells[location.x + i][location.y + j].getType());
+                        toSend[location.x + i][location.y + j].setOcup(cells[location.x + i][location.y + j].getOcup());
+                        toSend[location.x + i][location.y + j].setPlayerNum(cells[location.x + i][location.y + j].getPlayerNum());
+                    }
+
                 }
             }
             semaphore.release();
@@ -212,14 +213,8 @@ public class Server
         {
             if (message.equals("up"))
             {
-                try
-                {
-                    semaphore.acquire();
-                } catch (InterruptedException e)
-                {
-                    e.printStackTrace();
-                }
-                if (location.y - 1 >= 0 && cells[location.x][location.y-1].getType() == Cell.Type.PATH || cells[location.x-1][location.y].getType() == Cell.Type.BUSHES && cells[location.x][location.y-1].getOcup()== Cell.Ocup.NOTHING)
+                semaphore.tryAcquire();
+                if (location.y - 1 >= 0 && cells[location.x][location.y-1].getType() == Cell.Type.PATH || cells[location.x][location.y-1].getType() == Cell.Type.BUSHES && cells[location.x][location.y-1].getOcup()== Cell.Ocup.NOTHING)
                 {
                     cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
                     cells[location.x][location.y - 1].setOcup(Cell.Ocup.PLAYER);
@@ -231,14 +226,8 @@ public class Server
             }
             else if(message.equals("right"))
             {
-                try
-                {
-                    semaphore.acquire();
-                } catch (InterruptedException e)
-                {
-                    e.printStackTrace();
-                }
-                if (location.x + 1 < 60 && cells[location.x+1][location.y].getType() == Cell.Type.PATH || cells[location.x-1][location.y].getType() == Cell.Type.BUSHES && cells[location.x+1][location.y].getOcup()== Cell.Ocup.NOTHING)
+                semaphore.tryAcquire();
+                if (location.x + 1 < 60 && cells[location.x+1][location.y].getType() == Cell.Type.PATH || cells[location.x+1][location.y].getType() == Cell.Type.BUSHES && cells[location.x+1][location.y].getOcup()== Cell.Ocup.NOTHING)
                 {
                     cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
                     cells[location.x+1][location.y].setOcup(Cell.Ocup.PLAYER);
@@ -250,14 +239,8 @@ public class Server
             }
             else if(message.equals("down"))
             {
-                try
-                {
-                    semaphore.acquire();
-                } catch (InterruptedException e)
-                {
-                    e.printStackTrace();
-                }
-                if (location.y + 1 < 30 && cells[location.x][location.y+1].getType() == Cell.Type.PATH || cells[location.x-1][location.y].getType() == Cell.Type.BUSHES && cells[location.x][location.y+1].getOcup()== Cell.Ocup.NOTHING)
+                semaphore.tryAcquire();
+                if (location.y + 1 < 30 && cells[location.x][location.y+1].getType() == Cell.Type.PATH || cells[location.x][location.y+1].getType() == Cell.Type.BUSHES && cells[location.x][location.y+1].getOcup()== Cell.Ocup.NOTHING)
                 {
                     cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
                     cells[location.x][location.y+1].setOcup(Cell.Ocup.PLAYER);
@@ -269,13 +252,7 @@ public class Server
             }
             else if(message.equals("left"))
             {
-                try
-                {
-                    semaphore.acquire();
-                } catch (InterruptedException e)
-                {
-                    e.printStackTrace();
-                }
+                semaphore.tryAcquire();
                 if (location.x - 1 >= 0 && cells[location.x-1][location.y].getType() == Cell.Type.PATH || cells[location.x-1][location.y].getType() == Cell.Type.BUSHES && cells[location.x-1][location.y].getOcup() == Cell.Ocup.NOTHING)
                 {
                     cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
