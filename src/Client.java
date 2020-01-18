@@ -18,7 +18,7 @@ public class Client extends Thread
 {
     final String IP = "127.0.0.1";
     final int PORT = 5005;
-    final long period = 1500;
+    final long period = 1000;
     Cell[][] cells;
     Point location;
     int death = 0, carried = 0;
@@ -61,15 +61,11 @@ public class Client extends Thread
             dos.writeUTF("Komunikat");
             assert dis != null;
             System.out.println(dis.readUTF());
-            System.out.println("Bepis");
             location = new Point(dis.readInt(), dis.readInt());
-            System.out.println("Penis");
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-            System.out.println("Dupa");
             cells = (Cell[][]) ois.readObject();
-            System.out.println("Dupa2");
             Graphics graphics = new Graphics("Player", cells);
-            graphics.setTextArea("hello from the other program");
+            graphics.setTextArea("Wspolrzedne: (\" + location.x +\", \" + location.y + \")\\nCarried: \" + carried");
 
             ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
             Socket finalSocket = socket;
@@ -89,8 +85,13 @@ public class Client extends Thread
                         Cell[][] temporary = (Cell[][]) ois.readUnshared();
                         cells = temporary.clone();
                     }
+                    int x = finalDis.readInt();
+                    int y = finalDis.readInt();
+                    location.setLocation(x,y);
+                    carried = finalDis.readInt();
                     graphics.setArray(cells);
                     graphics.repaintBoard();
+                    graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y + ")\nCarried: " + carried);
 
                 } catch (IOException | ClassNotFoundException e)
                 {

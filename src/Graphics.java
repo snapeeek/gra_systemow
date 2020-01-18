@@ -5,7 +5,7 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
-//TODO wyświetlanie graczy, obozowiska i bestii
+//TODO wyświetlanie bestii
 
 public class Graphics extends JFrame implements KeyListener
 {
@@ -150,25 +150,41 @@ public class Graphics extends JFrame implements KeyListener
                         }
                         else if (cell[j].getOcup() == Cell.Ocup.COIN)
                         {
+                            g.setColor(Color.YELLOW);
+                            g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
                             g.setColor(Color.BLACK);
                             g.drawString("c", cell[j].x+3, cell[j].y + CELL_HEIGHT - 3);
                         }
                         else if (cell[j].getOcup() == Cell.Ocup.TREAS)
                         {
+                            g.setColor(Color.YELLOW);
+                            g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
                             g.setColor(Color.BLACK);
                             g.drawString("t", cell[j].x+3, cell[j].y + CELL_HEIGHT - 3);
                         }
                         else if (cell[j].getOcup() == Cell.Ocup.BIGT)
                         {
+                            g.setColor(Color.YELLOW);
+                            g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
                             g.setColor(Color.BLACK);
                             g.drawString("T", cell[j].x+3, cell[j].y + CELL_HEIGHT - 3);
                         }
-                        else if (cell[j].getOcup() == Cell.Ocup.CAMP)
+                        else if (cell[j].isCamp())
                         {
-                            g.setColor(Color.CYAN);
-                            g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
-                            g.setColor(Color.GRAY);
-                            g.drawString("A", cell[j].x+1, cell[j].y + CELL_HEIGHT - 3);
+                            if (cell[j].getOcup() == Cell.Ocup.NOTHING)
+                            {
+                                g.setColor(Color.CYAN);
+                                g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
+                                g.setColor(Color.GRAY);
+                                g.drawString("A", cell[j].x + 1, cell[j].y + CELL_HEIGHT - 3);
+                            }
+                            else if (cell[j].getOcup() == Cell.Ocup.PLAYER)
+                            {
+                                g.setColor(Color.CYAN);
+                                g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
+                                g.setColor(Color.GRAY);
+                                g.drawString(String.valueOf(cell[j].getPlayerNum()), cell[j].x + 1, cell[j].y + CELL_HEIGHT - 3);
+                            }
                         }
                         else if (cell[j].getOcup() == Cell.Ocup.PLAYER)
                         {
@@ -181,10 +197,30 @@ public class Graphics extends JFrame implements KeyListener
                     }
                     else if (cell[j].getType() == Cell.Type.BUSHES)
                     {
-                        g.setColor(Color.WHITE);
-                        g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
-                        g.setColor(Color.BLACK);
-                        g.drawString("#", cell[j].x+2, cell[j].y + CELL_HEIGHT - 3);
+                        if (cell[j].getOcup() == Cell.Ocup.NOTHING)
+                        {
+                            g.setColor(Color.WHITE);
+                            g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
+                            g.setColor(Color.BLACK);
+                            g.drawString("#", cell[j].x + 2, cell[j].y + CELL_HEIGHT - 3);
+                        }
+                        else if (cell[j].getOcup() == Cell.Ocup.PLAYER)
+                        {
+                            g.setColor(Color.MAGENTA);
+                            g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
+                            g.setColor(Color.yellow);
+                            g.drawString(String.valueOf(cell[j].getPlayerNum()), cell[j].x+2, cell[j].y + CELL_HEIGHT - 3);
+                            g.setColor(Color.BLACK);
+                            g.drawString("#", cell[j].x + 2, cell[j].y + CELL_HEIGHT - 3);
+                        }
+                        else if (cell[j].getOcup() == Cell.Ocup.BIGT)
+                        {
+                            g.setColor(Color.yellow);
+                            g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
+                            g.setColor(Color.black);
+                            g.drawString("T", cell[j].x, cell[j].y + CELL_HEIGHT - 3);
+                            g.drawString("#", cell[j].x + 2, cell[j].y + CELL_HEIGHT - 3);
+                        }
                     }
                     else
                     {

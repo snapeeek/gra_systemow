@@ -15,8 +15,6 @@ import java.util.concurrent.TimeUnit;
 
 import Maze.Cell;
 
-//TODO obsługa klawiatury + wysyłanie komunikatów
-
 public class Bot extends Thread
 {
     final String IP = "127.0.0.1";

@@ -20,7 +20,6 @@ public class Cell implements Serializable
         COIN,
         TREAS,
         BIGT,
-        CAMP,
         NOTHING
     }
 
@@ -28,6 +27,7 @@ public class Cell implements Serializable
     Ocup ocup;
     public int x,y;
     int playerNum;
+    boolean isCamp = false;
 
     public Cell(Type type, Ocup ocup, int x, int y)
     {
@@ -44,6 +44,16 @@ public class Cell implements Serializable
         this.x = x;
         this.y = y;
         this.playerNum = playerNum;
+    }
+
+    public void makeCamp()
+    {
+        isCamp = true;
+    }
+
+    public boolean isCamp()
+    {
+        return isCamp;
     }
 
     public Type getType()

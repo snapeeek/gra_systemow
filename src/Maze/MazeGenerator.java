@@ -4,6 +4,8 @@ import java.util.Random;
 
 public class MazeGenerator
 {
+    public static final int BOARD_WIDTH = 60;
+    public static final int BOARD_HEIGHT = 30;
     int length, width;
     Cell[][] cells;
     public static final int CELL_WIDTH = 10;
@@ -28,26 +30,65 @@ public class MazeGenerator
         //Random random = new Random();
         divide(cells, 0, 0, length, width, chooseOrientation(length, width));
 
-        int bushCount = 0;
-        while (bushCount < 50)
+        int count = 0;
+        while (count < 50)
         {
-            int i = rand.nextInt(60);
-            int j = rand.nextInt(30);
+            int i = rand.nextInt(BOARD_WIDTH);
+            int j = rand.nextInt(BOARD_HEIGHT);
 
             if (cells[i][j].getType() == Cell.Type.PATH && cells[i][j].getOcup() == Cell.Ocup.NOTHING)
             {
                 cells[i][j].setType(Cell.Type.BUSHES);
-                bushCount++;
+                count++;
+            }
+        }
+        
+        count = 0;
+        while (count < 50)
+        {
+            int i = rand.nextInt(BOARD_WIDTH);
+            int j = rand.nextInt(BOARD_HEIGHT);
+            
+            if (cells[i][j].getType() == Cell.Type.PATH && cells[i][j].getOcup() == Cell.Ocup.NOTHING)
+            {
+                cells[i][j].setOcup(Cell.Ocup.COIN);
+                count++;
+            }
+        }
+        
+        count = 0;
+        while (count < 25)
+        {
+            int i = rand.nextInt(BOARD_WIDTH);
+            int j = rand.nextInt(BOARD_HEIGHT);
+
+            if (cells[i][j].getType() == Cell.Type.PATH && cells[i][j].getOcup() == Cell.Ocup.NOTHING)
+            {
+                cells[i][j].setOcup(Cell.Ocup.TREAS);
+                count++;
+            }
+        }
+
+        count = 0;
+        while (count < 10)
+        {
+            int i = rand.nextInt(BOARD_WIDTH);
+            int j = rand.nextInt(BOARD_HEIGHT);
+
+            if ((cells[i][j].getType() == Cell.Type.PATH || cells[i][j].getType() == Cell.Type.BUSHES) && cells[i][j].getOcup() == Cell.Ocup.NOTHING )
+            {
+                cells[i][j].setOcup(Cell.Ocup.BIGT);
+                count++;
             }
         }
 
         int i, j;
         do
         {
-            i = rand.nextInt(60);
-            j = rand.nextInt(30);
+            i = rand.nextInt(BOARD_WIDTH);
+            j = rand.nextInt(BOARD_HEIGHT);
         } while (cells[i][j].getType() != Cell.Type.PATH || cells[i][j].getOcup() != Cell.Ocup.NOTHING);
-        cells[i][j].setOcup(Cell.Ocup.CAMP);
+        cells[i][j].makeCamp();
 
 
     }
@@ -85,8 +126,6 @@ public class MazeGenerator
                 wx = x;
             wy = y;
         }
-        /*int wx = x + (horizontal ? 0 : rand.nextInt(width - 2));
-        int wy = y + (horizontal ? rand.nextInt(height - 2) : 0);*/
 
         int px = wx + (horizontal ? rand.nextInt(width) : 0);
         int py = wy + (horizontal ? 0 : rand.nextInt(height));
