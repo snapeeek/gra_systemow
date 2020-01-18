@@ -1,6 +1,5 @@
 import Maze.Cell;
 
-import javax.net.ssl.SSLSocket;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -11,6 +10,9 @@ import java.io.ObjectInputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.*;
 
 
 //TODO obsługa klawiatury + wysyłanie komunikatów
@@ -19,8 +21,10 @@ public class Client extends Thread implements KeyListener
 {
     final String IP = "127.0.0.1";
     final int PORT = 5005;
+    final long period = 1000;
     Cell[][] cells;
     Point location;
+    String komunikat;
 
     public static void main(String[] args)
     {
@@ -61,34 +65,25 @@ public class Client extends Thread implements KeyListener
             System.out.println(dis.readUTF());
 
             location = new Point(dis.readInt(), dis.readInt());
-            Socket finalSocket = socket;
-            Thread myThread =
-                    new Thread(){
-                        public void run()
-                        {
-                            try
-                            {
-                                ObjectInputStream ois = new ObjectInputStream(finalSocket.getInputStream());
-                                cells = (Cell[][])ois.readObject();
-                            } catch (IOException | ClassNotFoundException e)
-                            {
-                                e.printStackTrace();
-                            }
-                        }
-                    };
-            myThread.run();
-            try
-            {
-                myThread.join();
-            } catch (InterruptedException e)
-            {
-                e.printStackTrace();
-            }
+            ObjectInputStream oos = new ObjectInputStream(socket.getInputStream());
+            cells = (Cell[][])oos.readObject();
             Graphics graphics = new Graphics("Player", cells);
 
 
+            ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+            Socket finalSocket = socket;
+            DataOutputStream finalDos = dos;
+            Runnable sendAndReceive = () ->
+            {
+                System.out.println(graphics.getCom());
+            };
+
+            executorService.scheduleAtFixedRate(sendAndReceive, period, period, TimeUnit.MILLISECONDS);
+
+
+
         }
-        catch (IOException e)
+        catch (IOException | ClassNotFoundException e)
         {
             e.printStackTrace();
         }
@@ -127,4 +122,5 @@ public class Client extends Thread implements KeyListener
     {
 
     }
+
 }

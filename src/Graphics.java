@@ -2,10 +2,12 @@ import Maze.Cell;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 
 //TODO wyświetlanie graczy, obozowiska i bestii
 
-public class Graphics extends JFrame
+public class Graphics extends JFrame implements KeyListener
 {
     private JTextArea textArea;
     private Board board;
@@ -13,19 +15,23 @@ public class Graphics extends JFrame
     final int DIM = 800;
     public static final int CELL_WIDTH = 10;
     public static final int CELL_HEIGHT = 15;
+    public String com = "nothing";
 
     Graphics(String name, Cell[][] cells)
     {
         super(name);
         this.cells = cells;
+
         JPanel contentPane = new JPanel();
         contentPane.setLayout(new BorderLayout(5,5));
         textArea = new JTextArea();
+        textArea.addKeyListener(this);
         textArea.setSize(DIM /2,DIM/2);
         textArea.setPreferredSize(new Dimension(60*CELL_WIDTH, 30 * CELL_HEIGHT));
         textArea.setEditable(false);
         textArea.setText("Witam serdecznie co sie dzieje\nskad to zwatpienie byku\npamietaj zeby ciagle isc do przodu, bo nikt za Ciebie tego nie zrobi B)");
         board = new Board();
+        board.addKeyListener(this);
 
         contentPane.add(board, BorderLayout.LINE_START);
         contentPane.add(textArea, BorderLayout.CENTER);
@@ -46,6 +52,54 @@ public class Graphics extends JFrame
     void repaintBoard()
     {
         board.repaint();
+    }
+
+    String getCom()
+    {
+        return com;
+    }
+
+    void resetCom()
+    {
+        this.com = "nothing";
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e)
+    {
+
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e)
+    {
+        switch (e.getKeyCode())
+        {
+            case KeyEvent.VK_UP:
+                com = "up";
+                break;
+            case KeyEvent.VK_LEFT:
+                com = "left";
+                break;
+            case KeyEvent.VK_DOWN:
+                com = "down";
+                break;
+            case KeyEvent.VK_RIGHT:
+                com = "right";
+                break;
+            case KeyEvent.VK_Q:
+                com = "exit";
+                break;
+            case KeyEvent.VK_C:
+                com = "coin";
+                break;
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e)
+    {
+
     }
 
     class Board extends JPanel

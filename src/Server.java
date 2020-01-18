@@ -144,7 +144,7 @@ public class Server
             {
                 for (int j : cords)
                 {
-                    if (location.x + i > 0 && location.x + i < 60 && location.y + j > 0 && location.y + j < 30)
+                    if (location.x + i >= 0 && location.x + i < 60 && location.y + j >= 0 && location.y + j < 30)
                         toSend[location.x + i][location.y + j] = cells[location.x + i][location.y + j];
                 }
             }
