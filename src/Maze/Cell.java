@@ -20,6 +20,7 @@ public class Cell implements Serializable
         COIN,
         TREAS,
         BIGT,
+        DEAD,
         NOTHING
     }
 
@@ -27,6 +28,7 @@ public class Cell implements Serializable
     Ocup ocup;
     public int x,y;
     int playerNum;
+    int coins = 0;
     boolean isCamp = false;
 
     public Cell(Type type, Ocup ocup, int x, int y)
@@ -93,5 +95,13 @@ public class Cell implements Serializable
         else return -1;
     }
 
+    public void setCoins(int coins)
+    {
+        this.coins = coins;
+    }
 
+    public int getCoins()
+    {
+        return coins;
+    }
 }

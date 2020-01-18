@@ -22,7 +22,6 @@ public class Client extends Thread
     Cell[][] cells;
     Point location;
     int death = 0, carried = 0;
-    String komunikat;
 
     public static void main(String[] args)
     {
@@ -65,7 +64,7 @@ public class Client extends Thread
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             cells = (Cell[][]) ois.readObject();
             Graphics graphics = new Graphics("Player", cells);
-            graphics.setTextArea("Wspolrzedne: (\" + location.x +\", \" + location.y + \")\\nCarried: \" + carried");
+            graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y + ")\nCarried: " + carried + "\nDeaths: " + death);
 
             ScheduledExecutorService executorService = Executors.newScheduledThreadPool(50);
             Socket finalSocket = socket;
@@ -89,9 +88,10 @@ public class Client extends Thread
                     int y = finalDis.readInt();
                     location.setLocation(x,y);
                     carried = finalDis.readInt();
+                    death = finalDis.readInt();
                     graphics.setArray(cells);
                     graphics.repaintBoard();
-                    graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y + ")\nCarried: " + carried);
+                    graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y + ")\nCarried: " + carried+ "\nDeaths: " + death);
 
                 } catch (IOException | ClassNotFoundException e)
                 {

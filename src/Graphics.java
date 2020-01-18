@@ -169,6 +169,13 @@ public class Graphics extends JFrame implements KeyListener
                             g.setColor(Color.BLACK);
                             g.drawString("T", cell[j].x+3, cell[j].y + CELL_HEIGHT - 3);
                         }
+                        else if (cell[j].getOcup() == Cell.Ocup.DEAD)
+                        {
+                            g.setColor(Color.YELLOW);
+                            g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
+                            g.setColor(Color.BLACK);
+                            g.drawString("D", cell[j].x + 3, cell[j].y + CELL_HEIGHT - 3);
+                        }
                         else if (cell[j].isCamp())
                         {
                             if (cell[j].getOcup() == Cell.Ocup.NOTHING)

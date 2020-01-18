@@ -6,6 +6,8 @@ import java.awt.event.WindowEvent;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -15,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 //TODO dodanie obsługi dodawania bestii i pieniążków
 //FIXME ogarnąć dodawanie do czterech socketów
+//FIXME kolizje
 
 public class Server
 {
@@ -23,6 +26,8 @@ public class Server
     static final int interval = 1000; //1000ms = 1s
     public static final int CELL_WIDTH = 10;
     public static final int CELL_HEIGTH = 15;
+    HashMap<Integer, Handler> players = new HashMap<>();
+    HashMap<Integer, Handler> sockets = new HashMap<>();
     static Cell[][] cells;
     static Graphics graphics;
     static AtomicInteger playerCount = new AtomicInteger(0);
@@ -72,6 +77,7 @@ public class Server
         boolean hasChanged = false;
         boolean inBushes = false;
         int bushesTime = 0;
+        ScheduledExecutorService executorService = null;
 
         Handler(Socket socket, Semaphore sem)
         {
@@ -89,12 +95,12 @@ public class Server
 
             location = searchForCords();
             start = new Point(location.x, location.y);
+            players.put(playerNumber, this);
         }
 
         @Override
         public void run()
         {
-            ScheduledExecutorService executorService = null;
             try
             {
                 System.out.println(dis.readUTF());
@@ -142,6 +148,7 @@ public class Server
                         dos.writeInt(location.y);
 
                         dos.writeInt(carried);
+                        dos.writeInt(deaths);
                     }
                     catch (IOException e)
                     {
@@ -214,96 +221,149 @@ public class Server
                 switch (message)
                 {
                     case "up":
-                        semaphore.tryAcquire();
                         if (location.y - 1 >= 0 && cells[location.x][location.y - 1].getType() == Cell.Type.PATH || cells[location.x][location.y - 1].getType() == Cell.Type.BUSHES && cells[location.x][location.y - 1].getOcup() == Cell.Ocup.NOTHING)
                         {
-                            cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
-                            if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.COIN)
-                                carried++;
-                            else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.TREAS)
-                                carried += 10;
-                            else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.BIGT)
-                                carried += 50;
-                            cells[location.x][location.y - 1].setOcup(Cell.Ocup.PLAYER);
-                            cells[location.x][location.y - 1].setPlayerNum(playerNumber);
-                            if (cells[location.x][location.y - 1].getType() == Cell.Type.BUSHES)
+                            if (cells[location.x][location.y-1].getOcup() == Cell.Ocup.PLAYER || (cells[location.x][location.y - 2].getOcup() == Cell.Ocup.PLAYER && location.y - 2 >= 0))
                             {
-                                inBushes = true;
-                                bushesTime = 0;
+                                death();
+                                hasChanged = true;
                             }
-                            location.setLocation(location.x, location.y - 1);
-                            hasChanged = true;
+                            else
+                            {
+                                semaphore.tryAcquire();
+                                cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
+                                if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.COIN)
+                                    carried++;
+                                else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.TREAS)
+                                    carried += 10;
+                                else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.BIGT)
+                                    carried += 50;
+                                else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.DEAD)
+                                    carried += cells[location.x][location.y - 1].getCoins();
+
+                                cells[location.x][location.y - 1].setOcup(Cell.Ocup.PLAYER);
+                                cells[location.x][location.y - 1].setPlayerNum(playerNumber);
+
+                                if (cells[location.x][location.y - 1].getType() == Cell.Type.BUSHES)
+                                {
+                                    inBushes = true;
+                                    bushesTime = 0;
+                                }
+                                location.setLocation(location.x, location.y - 1);
+                                hasChanged = true;
+                                semaphore.release();
+                            }
                         }
-                        semaphore.release();
+
                         break;
                     case "right":
-                        semaphore.tryAcquire();
-                        if (location.x + 1 < 60 && cells[location.x + 1][location.y].getType() == Cell.Type.PATH || cells[location.x + 1][location.y].getType() == Cell.Type.BUSHES && cells[location.x + 1][location.y].getOcup() == Cell.Ocup.NOTHING)
+
+                        if (location.x + 1 < 60 && cells[location.x + 1][location.y].getType() == Cell.Type.PATH || cells[location.x + 1][location.y].getType() == Cell.Type.BUSHES)
                         {
-                            cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
-                            if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.COIN)
-                                carried++;
-                            else if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.TREAS)
-                                carried += 10;
-                            else if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.BIGT)
-                                carried += 50;
-                            cells[location.x + 1][location.y].setOcup(Cell.Ocup.PLAYER);
-                            cells[location.x + 1][location.y].setPlayerNum(playerNumber);
-                            if (cells[location.x + 1][location.y].getType() == Cell.Type.BUSHES)
+                            if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.PLAYER || (cells[location.x + 2][location.y].getOcup() == Cell.Ocup.PLAYER && location.x + 2 < 60))
                             {
-                                inBushes = true;
-                                bushesTime = 0;
+                                death();
+                                hasChanged = true;
+                            } else
+                            {
+                                semaphore.tryAcquire();
+                                cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
+                                if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.COIN)
+                                    carried++;
+                                else if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.TREAS)
+                                    carried += 10;
+                                else if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.BIGT)
+                                    carried += 50;
+                                else if (cells[location.x+1][location.y].getOcup() == Cell.Ocup.DEAD)
+                                    carried += cells[location.x][location.y - 1].getCoins();
+
+                                cells[location.x + 1][location.y].setOcup(Cell.Ocup.PLAYER);
+                                cells[location.x + 1][location.y].setPlayerNum(playerNumber);
+
+                                if (cells[location.x + 1][location.y].getType() == Cell.Type.BUSHES)
+                                {
+                                    inBushes = true;
+                                    bushesTime = 0;
+                                }
+                                location.setLocation(location.x + 1, location.y);
+                                hasChanged = true;
+                                semaphore.release();
                             }
-                            location.setLocation(location.x + 1, location.y);
-                            hasChanged = true;
                         }
-                        semaphore.release();
+
                         break;
                     case "down":
-                        semaphore.tryAcquire();
-                        if (location.y + 1 < 30 && cells[location.x][location.y + 1].getType() == Cell.Type.PATH || cells[location.x][location.y + 1].getType() == Cell.Type.BUSHES && cells[location.x][location.y + 1].getOcup() == Cell.Ocup.NOTHING)
+
+                        if (location.y + 1 < 30 && cells[location.x][location.y + 1].getType() == Cell.Type.PATH || cells[location.x][location.y + 1].getType() == Cell.Type.BUSHES)
                         {
-                            cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
-                            if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.COIN)
-                                carried++;
-                            else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.TREAS)
-                                carried += 10;
-                            else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.BIGT)
-                                carried += 50;
-                            cells[location.x][location.y + 1].setOcup(Cell.Ocup.PLAYER);
-                            cells[location.x][location.y + 1].setPlayerNum(playerNumber);
-                            if (cells[location.x][location.y + 1].getType() == Cell.Type.BUSHES)
+                            if (cells[location.x][location.y+1].getOcup() == Cell.Ocup.PLAYER || (cells[location.x][location.y+2].getOcup() == Cell.Ocup.PLAYER && location.y + 2 < 30))
                             {
-                                inBushes = true;
-                                bushesTime = 0;
+                                death();
+                                hasChanged = true;
+                            } else
+                            {
+                                semaphore.tryAcquire();
+                                cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
+                                if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.COIN)
+                                    carried++;
+                                else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.TREAS)
+                                    carried += 10;
+                                else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.BIGT)
+                                    carried += 50;
+                                else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.DEAD)
+                                    carried += cells[location.x][location.y + 1].getCoins();
+
+                                cells[location.x][location.y + 1].setOcup(Cell.Ocup.PLAYER);
+                                cells[location.x][location.y + 1].setPlayerNum(playerNumber);
+
+                                if (cells[location.x][location.y + 1].getType() == Cell.Type.BUSHES)
+                                {
+                                    inBushes = true;
+                                    bushesTime = 0;
+                                }
+                                location.setLocation(location.x, location.y + 1);
+                                hasChanged = true;
+                                semaphore.release();
                             }
-                            location.setLocation(location.x, location.y + 1);
-                            hasChanged = true;
                         }
-                        semaphore.release();
+
                         break;
                     case "left":
-                        semaphore.tryAcquire();
-                        if (location.x - 1 >= 0 && cells[location.x - 1][location.y].getType() == Cell.Type.PATH || cells[location.x - 1][location.y].getType() == Cell.Type.BUSHES && cells[location.x - 1][location.y].getOcup() == Cell.Ocup.NOTHING)
+
+                        if (location.x - 1 >= 0 && cells[location.x - 1][location.y].getType() == Cell.Type.PATH || cells[location.x - 1][location.y].getType() == Cell.Type.BUSHES )
                         {
-                            cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
-                            if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.COIN)
-                                carried++;
-                            else if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.TREAS)
-                                carried += 10;
-                            else if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.BIGT)
-                                carried += 50;
-                            cells[location.x - 1][location.y].setOcup(Cell.Ocup.PLAYER);
-                            cells[location.x - 1][location.y].setPlayerNum(playerNumber);
-                            if (cells[location.x - 1][location.y].getType() == Cell.Type.BUSHES)
+                            if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.PLAYER || (cells[location.x - 2][location.y].getOcup() == Cell.Ocup.PLAYER && location.x - 2 >= 0))
                             {
-                                inBushes = true;
-                                bushesTime = 0;
+                                death();
+                                hasChanged = true;
                             }
-                            location.setLocation(location.x - 1, location.y);
-                            hasChanged = true;
+                            else
+                            {
+                                semaphore.tryAcquire();
+                                cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
+                                if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.COIN)
+                                    carried++;
+                                else if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.TREAS)
+                                    carried += 10;
+                                else if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.BIGT)
+                                    carried += 50;
+                                else if (cells[location.x-1][location.y].getOcup() == Cell.Ocup.DEAD)
+                                    carried += cells[location.x-1][location.y].getCoins();
+
+                                cells[location.x - 1][location.y].setOcup(Cell.Ocup.PLAYER);
+                                cells[location.x - 1][location.y].setPlayerNum(playerNumber);
+
+                                if (cells[location.x - 1][location.y].getType() == Cell.Type.BUSHES)
+                                {
+                                    inBushes = true;
+                                    bushesTime = 0;
+                                }
+                                location.setLocation(location.x - 1, location.y);
+                                hasChanged = true;
+                                semaphore.release();
+                            }
                         }
-                        semaphore.release();
+
                         break;
                 }
                 if (bushesTime == 1)
@@ -316,8 +376,20 @@ public class Server
             }
         }
 
+        private void death()
+        {
+            deaths++;
 
+            semaphore.tryAcquire();
 
+            cells[location.x][location.y].setOcup(Cell.Ocup.DEAD);
+            cells[location.x][location.y].setCoins(carried);
+            carried = 0;
+            location.setLocation(start.x, start.y);
+            cells[location.x][location.y].setOcup(Cell.Ocup.PLAYER);
+            cells[location.x][location.y].setPlayerNum(playerNumber);
+            semaphore.release();
+        }
 
 
     }

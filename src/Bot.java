@@ -67,7 +67,7 @@ public class Bot extends Thread
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             cells = (Cell[][]) ois.readObject();
             Graphics graphics = new Graphics("Bot", cells);
-            graphics.setTextArea("hello from the other program");
+            graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y + ")\nCarried: " + carried + "\nDeaths: " + death);
 
             ScheduledExecutorService executorService = Executors.newScheduledThreadPool(50);
 
@@ -96,9 +96,10 @@ public class Bot extends Thread
                     int y = finalDis.readInt();
                     location.setLocation(x,y);
                     carried = finalDis.readInt();
+                    death = finalDis.readInt();
                     graphics.setArray(cells);
                     graphics.repaintBoard();
-                    graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y + ")\nCarried: " + carried);
+                    graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y + ")\nCarried: " + carried + "\nDeaths: " + death);
                     finalDos.flush();
 
                 } catch (IOException | ClassNotFoundException e)
