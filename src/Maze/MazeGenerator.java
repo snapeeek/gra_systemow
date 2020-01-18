@@ -30,6 +30,17 @@ public class MazeGenerator
         //Random random = new Random();
         divide(cells, 0, 0, length, width, chooseOrientation(length, width));
 
+        for (int i = 0; i < 60; i++)
+        {
+            for (int j = 0; j < 30; j++)
+            {
+                if (i == 0 || i == width-1 || j == 0 || j == length-1)
+                    cells[i][j].setType(Cell.Type.WALL);
+            }
+        }
+
+        validate();
+
         int count = 0;
         while (count < 50)
         {
@@ -173,6 +184,28 @@ public class MazeGenerator
         else
         {
             return rand.nextInt(2) + 1;
+        }
+    }
+
+    private void validate()
+    {
+        for (int i = 0; i < width; i++)
+        {
+            for (int j = 0; j < length; j++)
+            {
+                if (!((i-1>=0 && cells[i-1][j].getType() == Cell.Type.PATH) || (i+1<width && cells[i+1][j].getType() == Cell.Type.PATH) ||
+                        (j-1>=0 && cells[i][j-1].getType() == Cell.Type.PATH) || (j+1 < length && cells[i][j+1].getType() == Cell.Type.PATH)))
+                {
+                    if ((i-2>=0 && cells[i-2][j].getType() == Cell.Type.PATH))
+                        cells[i-1][j].setType(Cell.Type.PATH);
+                    else if ((i+2 < width && cells[i+2][j].getType() == Cell.Type.PATH))
+                        cells[i+1][j].setType(Cell.Type.PATH);
+                    else if ((j+2 < length && cells[i][j+2].getType() == Cell.Type.PATH))
+                        cells[i][j+1].setType(Cell.Type.PATH);
+                    else if ((j+2 < length && cells[i][j+2].getType() == Cell.Type.PATH))
+                        cells[i][j+1].setType(Cell.Type.PATH);
+                }
+            }
         }
     }
 }

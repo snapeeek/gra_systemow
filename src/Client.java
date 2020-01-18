@@ -67,7 +67,7 @@ public class Client extends Thread
             Graphics graphics = new Graphics("Player", cells);
             graphics.setTextArea("Wspolrzedne: (\" + location.x +\", \" + location.y + \")\\nCarried: \" + carried");
 
-            ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+            ScheduledExecutorService executorService = Executors.newScheduledThreadPool(50);
             Socket finalSocket = socket;
             DataOutputStream finalDos = dos;
             DataInputStream finalDis = dis;

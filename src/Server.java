@@ -51,7 +51,6 @@ public class Server
         {
             e.printStackTrace();
         }
-        System.out.println(cells.length);
     }
 
     public static void main(String[] args)
@@ -107,10 +106,11 @@ public class Server
                 oos.writeObject(toSend);
 
 
-                executorService = Executors.newScheduledThreadPool(1);
+                executorService = Executors.newScheduledThreadPool(50);
                 ScheduledExecutorService finalExecutorService = executorService;
                 Runnable sendAndReceive = () ->
                 {
+                    hasChanged = false;
                     String msg = "none";
                     try
                     {
@@ -122,7 +122,6 @@ public class Server
 
                         if (hasChanged)
                         {
-
                             dos.writeUTF("mapa");
 
                             Cell[][] sending = generateChunk(location);

@@ -8,6 +8,7 @@ import java.io.ObjectInputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.security.SecureRandom;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -19,7 +20,7 @@ public class Bot extends Thread
 {
     final String IP = "127.0.0.1";
     final int PORT = 5005;
-    final long period = 1500;
+    final long period = 1000;
     Cell[][] cells;
     Point location;
     int death = 0, carried = 0;
@@ -69,7 +70,7 @@ public class Bot extends Thread
             Graphics graphics = new Graphics("Bot", cells);
             graphics.setTextArea("hello from the other program");
 
-            ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+            ScheduledExecutorService executorService = Executors.newScheduledThreadPool(50);
             Socket finalSocket = socket;
             DataOutputStream finalDos = dos;
             DataInputStream finalDis = dis;
@@ -77,7 +78,7 @@ public class Bot extends Thread
             {
                 try
                 {
-                    Random random = new Random();
+                    SecureRandom random = new SecureRandom();
                     int rand = random.nextInt(4);
                     String msg;
                     if (rand == 0)
@@ -88,6 +89,7 @@ public class Bot extends Thread
                         msg = "down";
                     else msg = "left";
                     System.out.println(msg);
+
                     finalDos.writeUTF(msg);
                     graphics.resetCom();
                     if (finalDis.readUTF().equals("mapa"))
@@ -95,8 +97,14 @@ public class Bot extends Thread
                         Cell[][] temporary = (Cell[][]) ois.readUnshared();
                         cells = temporary.clone();
                     }
+                    int x = finalDis.readInt();
+                    int y = finalDis.readInt();
+                    location.setLocation(x,y);
+                    carried = finalDis.readInt();
                     graphics.setArray(cells);
                     graphics.repaintBoard();
+                    graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y + ")\nCarried: " + carried);
+                    finalDos.flush();
 
                 } catch (IOException | ClassNotFoundException e)
                 {
