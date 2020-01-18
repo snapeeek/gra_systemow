@@ -1,7 +1,5 @@
 package Maze;
 
-import javax.swing.*;
-import java.awt.*;
 import java.util.Random;
 
 public class MazeGenerator
@@ -9,7 +7,7 @@ public class MazeGenerator
     int length, width;
     Cell[][] cells;
     public static final int CELL_WIDTH = 10;
-    public static final int CELL_HEIGTH = 15;
+    public static final int CELL_HEIGHT = 15;
     private static final int HORIZONTAL = 1;
     private static final int VERTICAL = 2;
     private Random rand = new Random();
@@ -24,7 +22,7 @@ public class MazeGenerator
         {
             for (int j = 0; j < y; j++)
             {
-                cells[i][j] = new Cell(Cell.Type.WALL, Cell.Ocup.NOTHING, i*CELL_WIDTH, j*CELL_HEIGTH);
+                cells[i][j] = new Cell(Cell.Type.WALL, Cell.Ocup.NOTHING, i*CELL_WIDTH, j* CELL_HEIGHT);
             }
         }
         //Random random = new Random();

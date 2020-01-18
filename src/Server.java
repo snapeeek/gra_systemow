@@ -6,7 +6,10 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Random;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 //TODO dodanie obsługi klawiatury
@@ -80,7 +83,6 @@ public class Server
             }
 
             location = searchForCords();
-
         }
 
         @Override
@@ -90,14 +92,40 @@ public class Server
             {
                 System.out.println(dis.readUTF());
                 dos.writeUTF("Odebrano komunikat");
-                Thread.sleep(5000);
+
                 dos.writeInt(location.x);
                 dos.writeInt(location.y);
 
                 Cell[][] toSend = generateChunk();
                 ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
                 oos.writeObject(toSend);
-            } catch (IOException | InterruptedException e)
+
+                ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+                Runnable sendAndReceive = () ->
+                {
+                    String msg = "none";
+                    try
+                    {
+                        msg = dis.readUTF();
+                    } catch (IOException e)
+                    {
+                        e.printStackTrace();
+                    }
+                    playerAction(msg);
+
+                    Cell[][] send = generateChunk();
+                    try
+                    {
+                        System.out.println("Wysylam mape");
+                        oos.writeObject(send);
+                    } catch (IOException e)
+                    {
+                        e.printStackTrace();
+                    }
+                };
+                executorService.scheduleAtFixedRate(sendAndReceive, interval, interval, TimeUnit.MILLISECONDS);
+
+            } catch (IOException e)
             {
                 e.printStackTrace();
             }
@@ -152,6 +180,84 @@ public class Server
             }
             semaphore.release();
             return toSend;
+        }
+
+        void playerAction(String message)
+        {
+            if (message.equals("up"))
+            {
+                try
+                {
+                    semaphore.acquire();
+                } catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+                if (location.y - 1 >= 0 && cells[location.x][location.y-1].getType() == Cell.Type.PATH && cells[location.x][location.y-1].getOcup()== Cell.Ocup.NOTHING)
+                {
+                    cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
+                    cells[location.x][location.y - 1].setOcup(Cell.Ocup.PLAYER);
+                    cells[location.x][location.y - 1].setPlayerNum(playerNumber);
+                    location.setLocation(location.x, location.y-1);
+                }
+                semaphore.release();
+            }
+            else if(message.equals("right"))
+            {
+                try
+                {
+                    semaphore.acquire();
+                } catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+                if (location.x + 1 < 60 && cells[location.x+1][location.y].getType() == Cell.Type.PATH || cells[location.x-1][location.y].getType() == Cell.Type.BUSHES && cells[location.x+1][location.y].getOcup()== Cell.Ocup.NOTHING)
+                {
+                    cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
+                    cells[location.x+1][location.y].setOcup(Cell.Ocup.PLAYER);
+                    cells[location.x+1][location.y].setPlayerNum(playerNumber);
+                    location.setLocation(location.x+1, location.y);
+                }
+                semaphore.release();
+            }
+            else if(message.equals("down"))
+            {
+                try
+                {
+                    semaphore.acquire();
+                } catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+                if (location.y + 1 < 30 && cells[location.x][location.y+1].getType() == Cell.Type.PATH || cells[location.x-1][location.y].getType() == Cell.Type.BUSHES && cells[location.x][location.y+1].getOcup()== Cell.Ocup.NOTHING)
+                {
+                    cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
+                    cells[location.x][location.y+1].setOcup(Cell.Ocup.PLAYER);
+                    cells[location.x][location.y+1].setPlayerNum(playerNumber);
+                    location.setLocation(location.x, location.y+1);
+                }
+                semaphore.release();
+            }
+            else if(message.equals("left"))
+            {
+                try
+                {
+                    semaphore.acquire();
+                } catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+                if (location.x - 1 >= 0 && cells[location.x-1][location.y].getType() == Cell.Type.PATH || cells[location.x-1][location.y].getType() == Cell.Type.BUSHES && cells[location.x-1][location.y].getOcup() == Cell.Ocup.NOTHING)
+                {
+                    cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
+                    cells[location.x-1][location.y].setOcup(Cell.Ocup.PLAYER);
+                    cells[location.x-1][location.y].setPlayerNum(playerNumber);
+                    location.setLocation(location.x-1, location.y);
+                }
+                semaphore.release();
+            }
+            graphics.setArray(cells);
+            graphics.repaintBoard();
         }
     }
 }

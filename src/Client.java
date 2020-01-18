@@ -17,7 +17,7 @@ import java.util.concurrent.*;
 
 //TODO obsługa klawiatury + wysyłanie komunikatów
 
-public class Client extends Thread implements KeyListener
+public class Client extends Thread
 {
     final String IP = "127.0.0.1";
     final int PORT = 5005;
@@ -66,8 +66,8 @@ public class Client extends Thread implements KeyListener
             System.out.println(dis.readUTF());
 
             location = new Point(dis.readInt(), dis.readInt());
-            ObjectInputStream oos = new ObjectInputStream(socket.getInputStream());
-            cells = (Cell[][])oos.readObject();
+            ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+            cells = (Cell[][])ois.readObject();
             Graphics graphics = new Graphics("Player", cells);
             graphics.setTextArea("");
 
@@ -76,13 +76,24 @@ public class Client extends Thread implements KeyListener
             DataOutputStream finalDos = dos;
             Runnable sendAndReceive = () ->
             {
-                System.out.println(graphics.getCom());
+                try
+                {
+                    String msg = graphics.getCom();
+                    System.out.println(msg);
+                    finalDos.writeUTF(msg);
+                    graphics.resetCom();
+                    System.out.println("Obieram mape");
+                    cells = (Cell[][])ois.readObject();
+                    graphics.setArray(cells);
+                    graphics.repaintBoard();
+                } catch (IOException | ClassNotFoundException e)
+                {
+                    e.printStackTrace();
+                }
+
             };
 
             executorService.scheduleAtFixedRate(sendAndReceive, period, period, TimeUnit.MILLISECONDS);
-
-
-
         }
         catch (IOException | ClassNotFoundException e)
         {
@@ -103,25 +114,4 @@ public class Client extends Thread implements KeyListener
         }
         return sock;
     }
-
-    @Override
-    public void keyTyped(KeyEvent e)
-    {
-
-    }
-
-    @Override
-    public void keyPressed(KeyEvent e)
-    {
-        if (e.getKeyCode() == KeyEvent.VK_UP)
-            System.out.println(e.getKeyCode());
-
-    }
-
-    @Override
-    public void keyReleased(KeyEvent e)
-    {
-
-    }
-
 }
