@@ -9,12 +9,11 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.security.SecureRandom;
-import java.util.Random;
+import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import Maze.Cell;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Bot extends Thread
 {
@@ -71,23 +70,19 @@ public class Bot extends Thread
             graphics.setTextArea("hello from the other program");
 
             ScheduledExecutorService executorService = Executors.newScheduledThreadPool(50);
-            Socket finalSocket = socket;
+
             DataOutputStream finalDos = dos;
             DataInputStream finalDis = dis;
+            //final String[] lastDirection = {null};
             Runnable sendAndReceive = () ->
             {
                 try
                 {
+                    ArrayList<String> moves = checkMoves();
                     SecureRandom random = new SecureRandom();
-                    int rand = random.nextInt(4);
                     String msg;
-                    if (rand == 0)
-                        msg = "up";
-                    else if (rand == 1)
-                        msg = "right";
-                    else if (rand == 2)
-                        msg = "down";
-                    else msg = "left";
+                    msg = moves.get(random.nextInt(moves.size()));
+                    //lastDirection[0] = msg;
                     System.out.println(msg);
 
                     finalDos.writeUTF(msg);
@@ -134,5 +129,37 @@ public class Bot extends Thread
         }
         return sock;
     }
+
+    ArrayList<String> checkMoves()
+    {
+        ArrayList<String> possible = new ArrayList<>();
+        if (location.x+1 >= 0 && cells[location.x-1][location.y].getType() != Cell.Type.WALL)
+            possible.add("left");
+
+        if (location.x+1 < 60 && cells[location.x+1][location.y].getType() != Cell.Type.WALL)
+            possible.add("right");
+
+        if (location.y - 1 >= 0 && cells[location.x][location.y-1].getType() != Cell.Type.WALL)
+            possible.add("up");
+
+        if (location.y + 1 < 30 && cells[location.x][location.y+1].getType() != Cell.Type.WALL)
+            possible.add("down");
+
+        return possible;
+    }
+
+    /*String getOpposite(String dir)
+    {
+        if (dir.equals("up"))
+            return "down";
+        else if (dir.equals("down"))
+            return "up";
+        else if (dir.equals("left"))
+            return "right";
+        else if (dir.equals("right"))
+            return "right";
+        else
+            return "nothing";
+    }*/
 }
 
