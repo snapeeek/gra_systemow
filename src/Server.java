@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Server
 {
     static final int PORT = 5005;
-    static final int interval = 1000; //1000ms = 1s
+    static final int interval = 1500; //1000ms = 1s
     public static final int CELL_WIDTH = 10;
     public static final int CELL_HEIGTH = 15;
     static Cell[][] cells;
@@ -67,6 +67,7 @@ public class Server
         int playerNumber;
         Semaphore semaphore;
         int carried = 0, deaths = 0;
+        boolean hasChanged = false;
 
         Handler(Socket socket, Semaphore sem)
         {
@@ -96,13 +97,21 @@ public class Server
                 dos.writeInt(location.x);
                 dos.writeInt(location.y);
 
-                Cell[][] toSend = generateChunk();
+                Cell[][] toSend = generateChunk(location);
                 ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
                 oos.writeObject(toSend);
+
 
                 ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
                 Runnable sendAndReceive = () ->
                 {
+                    try
+                    {
+                        oos.flush();
+                    } catch (IOException e)
+                    {
+                        e.printStackTrace();
+                    }
                     String msg = "none";
                     try
                     {
@@ -113,15 +122,37 @@ public class Server
                     }
                     playerAction(msg);
 
-                    Cell[][] send = generateChunk();
-                    try
+
+                    if (hasChanged)
                     {
-                        System.out.println("Wysylam mape");
-                        oos.writeObject(send);
-                    } catch (IOException e)
-                    {
-                        e.printStackTrace();
+                        try
+                        {
+                            dos.writeUTF("mapa");
+                        } catch (IOException e)
+                        {
+                            e.printStackTrace();
+                        }
+                        Cell[][] sending = generateChunk(location);
+                        try
+                        {
+                            //System.out.println("Wysylam mape");
+                            oos.writeObject(sending.clone());
+                        } catch (IOException e)
+                        {
+                            e.printStackTrace();
+                        }
                     }
+                    else
+                    {
+                        try
+                        {
+                            dos.writeUTF("nie");
+                        } catch (IOException e)
+                        {
+                            e.printStackTrace();
+                        }
+                    }
+                    hasChanged = false;
                 };
                 executorService.scheduleAtFixedRate(sendAndReceive, interval, interval, TimeUnit.MILLISECONDS);
 
@@ -129,14 +160,9 @@ public class Server
             {
                 e.printStackTrace();
             }
-
-
-            /*cells = generatingCells();
-            graphics.setArray(cells);
-            graphics.repaintBoard();*/
         }
 
-         Point searchForCords()
+        Point searchForCords()
         {
             Random random = new Random();
             int x, y;
@@ -160,7 +186,7 @@ public class Server
             return new Point(x,y);
         }
 
-        Cell[][] generateChunk()
+        Cell[][] generateChunk(Point location)
         {
             try
             {
@@ -193,12 +219,13 @@ public class Server
                 {
                     e.printStackTrace();
                 }
-                if (location.y - 1 >= 0 && cells[location.x][location.y-1].getType() == Cell.Type.PATH && cells[location.x][location.y-1].getOcup()== Cell.Ocup.NOTHING)
+                if (location.y - 1 >= 0 && cells[location.x][location.y-1].getType() == Cell.Type.PATH || cells[location.x-1][location.y].getType() == Cell.Type.BUSHES && cells[location.x][location.y-1].getOcup()== Cell.Ocup.NOTHING)
                 {
                     cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
                     cells[location.x][location.y - 1].setOcup(Cell.Ocup.PLAYER);
                     cells[location.x][location.y - 1].setPlayerNum(playerNumber);
                     location.setLocation(location.x, location.y-1);
+                    hasChanged = true;
                 }
                 semaphore.release();
             }
@@ -217,6 +244,7 @@ public class Server
                     cells[location.x+1][location.y].setOcup(Cell.Ocup.PLAYER);
                     cells[location.x+1][location.y].setPlayerNum(playerNumber);
                     location.setLocation(location.x+1, location.y);
+                    hasChanged = true;
                 }
                 semaphore.release();
             }
@@ -235,6 +263,7 @@ public class Server
                     cells[location.x][location.y+1].setOcup(Cell.Ocup.PLAYER);
                     cells[location.x][location.y+1].setPlayerNum(playerNumber);
                     location.setLocation(location.x, location.y+1);
+                    hasChanged = true;
                 }
                 semaphore.release();
             }
@@ -253,6 +282,7 @@ public class Server
                     cells[location.x-1][location.y].setOcup(Cell.Ocup.PLAYER);
                     cells[location.x-1][location.y].setPlayerNum(playerNumber);
                     location.setLocation(location.x-1, location.y);
+                    hasChanged = true;
                 }
                 semaphore.release();
             }

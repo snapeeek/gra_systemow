@@ -46,7 +46,7 @@ public class Graphics extends JFrame implements KeyListener
     
     void setArray(Cell[][] temp)
     {
-        this.cells = temp;
+        this.cells = temp.clone();
     }
 
     void setTextArea(String str)

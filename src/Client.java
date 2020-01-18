@@ -1,8 +1,6 @@
 import Maze.Cell;
 
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -10,9 +8,8 @@ import java.io.ObjectInputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 //TODO obsługa klawiatury + wysyłanie komunikatów
@@ -21,7 +18,7 @@ public class Client extends Thread
 {
     final String IP = "127.0.0.1";
     final int PORT = 5005;
-    final long period = 1000;
+    final long period = 1500;
     Cell[][] cells;
     Point location;
     int death = 0, carried = 0;
@@ -67,13 +64,14 @@ public class Client extends Thread
 
             location = new Point(dis.readInt(), dis.readInt());
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-            cells = (Cell[][])ois.readObject();
+            cells = (Cell[][]) ois.readObject();
             Graphics graphics = new Graphics("Player", cells);
-            graphics.setTextArea("");
+            graphics.setTextArea("hello from the other program");
 
             ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
             Socket finalSocket = socket;
             DataOutputStream finalDos = dos;
+            DataInputStream finalDis = dis;
             Runnable sendAndReceive = () ->
             {
                 try
@@ -82,10 +80,15 @@ public class Client extends Thread
                     System.out.println(msg);
                     finalDos.writeUTF(msg);
                     graphics.resetCom();
-                    System.out.println("Obieram mape");
-                    cells = (Cell[][])ois.readObject();
+                    //System.out.println("Obieram mape");
+                    if (finalDis.readUTF().equals("mapa"))
+                    {
+                        Cell[][] temporary = (Cell[][]) ois.readUnshared();
+                        cells = temporary;
+                    }
                     graphics.setArray(cells);
                     graphics.repaintBoard();
+
                 } catch (IOException | ClassNotFoundException e)
                 {
                     e.printStackTrace();
