@@ -4,6 +4,7 @@ import Maze.MazeGenerator;
 import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.io.*;
+import java.lang.ref.Reference;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -27,7 +28,6 @@ public class Server
     public static final int CELL_WIDTH = 10;
     public static final int CELL_HEIGTH = 15;
     HashMap<Integer, Handler> players = new HashMap<>();
-    HashMap<Integer, Handler> sockets = new HashMap<>();
     static Cell[][] cells;
     static Graphics graphics;
     static AtomicInteger playerCount = new AtomicInteger(0);
@@ -73,12 +73,13 @@ public class Server
         int[] cords = {-2,-1,0,1,2};
         int playerNumber;
         Semaphore semaphore;
-        int carried = 0, deaths = 0;
+        int carried = 0, deaths = 0, brought = 0;
         boolean hasChanged = false;
         boolean inBushes = false;
         int bushesTime = 0;
         ScheduledExecutorService executorService = null;
         boolean ded = false;
+        Point deathLoc = null;
 
         Handler(Socket socket, Semaphore sem)
         {
@@ -152,6 +153,7 @@ public class Server
                         dos.writeInt(location.y);
 
                         dos.writeInt(carried);
+                        dos.writeInt(brought);
                         dos.writeInt(deaths);
                     }
                     catch (IOException e)
@@ -230,6 +232,7 @@ public class Server
                             if (cells[location.x][location.y-1].getOcup() == Cell.Ocup.PLAYER)
                             {
                                 Handler help = players.get(cells[location.x][location.y-1].getPlayerNum());
+                                help.deathLoc = (Point)location.clone();
                                 help.ded = true;
                                 death();
                                 hasChanged = true;
@@ -245,7 +248,15 @@ public class Server
                                 else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.BIGT)
                                     carried += 50;
                                 else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.DEAD)
+                                {
                                     carried += cells[location.x][location.y - 1].getCoins();
+                                    cells[location.x][location.y - 1].setCoins(0);
+                                }
+                                else if (cells[location.x][location.y - 1].isCamp())
+                                {
+                                    brought += carried;
+                                    carried = 0;
+                                }
 
                                 cells[location.x][location.y - 1].setOcup(Cell.Ocup.PLAYER);
                                 cells[location.x][location.y - 1].setPlayerNum(playerNumber);
@@ -269,6 +280,7 @@ public class Server
                             if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.PLAYER)
                             {
                                 Handler help = players.get(cells[location.x+1][location.y].getPlayerNum());
+                                help.deathLoc = (Point)location.clone();
                                 help.ded = true;
                                 death();
                                 hasChanged = true;
@@ -283,7 +295,15 @@ public class Server
                                 else if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.BIGT)
                                     carried += 50;
                                 else if (cells[location.x+1][location.y].getOcup() == Cell.Ocup.DEAD)
-                                    carried += cells[location.x][location.y - 1].getCoins();
+                                {
+                                    carried += cells[location.x + 1][location.y].getCoins();
+                                    cells[location.x + 1][location.y].setCoins(0);
+                                }
+                                else if (cells[location.x+1][location.y].isCamp())
+                                {
+                                    brought += carried;
+                                    carried = 0;
+                                }
 
                                 cells[location.x + 1][location.y].setOcup(Cell.Ocup.PLAYER);
                                 cells[location.x + 1][location.y].setPlayerNum(playerNumber);
@@ -307,6 +327,7 @@ public class Server
                             if (cells[location.x][location.y+1].getOcup() == Cell.Ocup.PLAYER)
                             {
                                 Handler help = players.get(cells[location.x][location.y+1].getPlayerNum());
+                                help.deathLoc = (Point)location.clone();
                                 help.ded = true;
                                 death();
                                 hasChanged = true;
@@ -321,7 +342,16 @@ public class Server
                                 else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.BIGT)
                                     carried += 50;
                                 else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.DEAD)
+                                {
                                     carried += cells[location.x][location.y + 1].getCoins();
+                                    cells[location.x][location.y + 1].setCoins(0);
+                                }
+                                else if (cells[location.x][location.y + 1].isCamp())
+                                {
+                                    brought += carried;
+                                    carried = 0;
+                                }
+
 
                                 cells[location.x][location.y + 1].setOcup(Cell.Ocup.PLAYER);
                                 cells[location.x][location.y + 1].setPlayerNum(playerNumber);
@@ -345,6 +375,7 @@ public class Server
                             if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.PLAYER)
                             {
                                 Handler help = players.get(cells[location.x-1][location.y].getPlayerNum());
+                                help.deathLoc = (Point)location.clone();
                                 help.ded = true;
                                 death();
                                 hasChanged = true;
@@ -360,7 +391,15 @@ public class Server
                                 else if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.BIGT)
                                     carried += 50;
                                 else if (cells[location.x-1][location.y].getOcup() == Cell.Ocup.DEAD)
-                                    carried += cells[location.x-1][location.y].getCoins();
+                                {
+                                    carried += cells[location.x - 1][location.y].getCoins();
+                                    cells[location.x - 1][location.y].setCoins(0);
+                                }
+                                else if (cells[location.x-1][location.y].isCamp())
+                                {
+                                    brought += carried;
+                                    carried = 0;
+                                }
 
                                 cells[location.x - 1][location.y].setOcup(Cell.Ocup.PLAYER);
                                 cells[location.x - 1][location.y].setPlayerNum(playerNumber);
@@ -393,9 +432,21 @@ public class Server
             deaths++;
 
             semaphore.tryAcquire();
+            if (deathLoc != null)
+            {
+                cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
+                cells[deathLoc.x][deathLoc.y].setOcup(Cell.Ocup.DEAD);
+                int temp = cells[deathLoc.x][deathLoc.y].getCoins();
+                cells[deathLoc.x][deathLoc.y].setCoins(carried + temp);
+                deathLoc = null;
+            }
+            else
+            {
 
-            cells[location.x][location.y].setOcup(Cell.Ocup.DEAD);
-            cells[location.x][location.y].setCoins(carried);
+                cells[location.x][location.y].setOcup(Cell.Ocup.DEAD);
+                int temp = cells[location.x][location.y].getCoins();
+                cells[location.x][location.y].setCoins(carried + temp);
+            }
             carried = 0;
             location.setLocation(start.x, start.y);
             cells[location.x][location.y].setOcup(Cell.Ocup.PLAYER);

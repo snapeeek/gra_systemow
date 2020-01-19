@@ -16,12 +16,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class Client extends Thread
 {
+    final String legend = "Legend: \n" + "1234 - players\n" + "c - 1 coin\n" + "t - 10 coins\n" + "T - 50 coins\n" + "* - beast\n" + "# - bushes (slowdown)";
     final String IP = "127.0.0.1";
     final int PORT = 5005;
     final long period = 1000;
     Cell[][] cells;
-    Point location;
-    int death = 0, carried = 0;
+    Point location, start;
+    int death = 0, carried = 0, brought = 0;
 
     public static void main(String[] args)
     {
@@ -61,10 +62,13 @@ public class Client extends Thread
             assert dis != null;
             System.out.println(dis.readUTF());
             location = new Point(dis.readInt(), dis.readInt());
+            start = new Point(location.x, location.y);
+
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             cells = (Cell[][]) ois.readObject();
             Graphics graphics = new Graphics("Player", cells);
-            graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y + ")\nCarried: " + carried + "\nDeaths: " + death);
+            graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y +")\nWspolrzedne startowe: ( " + start.x + ", " + start.y + ")\nCarried: " + carried
+                    + "\nBrought: " + brought + "\nDeaths: " + death + "\n\n\n" + legend);
 
             ScheduledExecutorService executorService = Executors.newScheduledThreadPool(50);
             Socket finalSocket = socket;
@@ -88,10 +92,12 @@ public class Client extends Thread
                     int y = finalDis.readInt();
                     location.setLocation(x,y);
                     carried = finalDis.readInt();
+                    brought = finalDis.readInt();
                     death = finalDis.readInt();
                     graphics.setArray(cells);
                     graphics.repaintBoard();
-                    graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y + ")\nCarried: " + carried+ "\nDeaths: " + death);
+                    graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y +")\nWspolrzedne startowe: ( " + start.x + ", " + start.y + ")\nCarried: " + carried
+                            + "\nBrought: " + brought + "\nDeaths: " + death + "\n\n\n" + legend);
 
                 } catch (IOException | ClassNotFoundException e)
                 {
