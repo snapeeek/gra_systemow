@@ -98,10 +98,8 @@ public class MazeGenerator
         {
             i = rand.nextInt(BOARD_WIDTH);
             j = rand.nextInt(BOARD_HEIGHT);
-        } while (cells[i][j].getType() != Cell.Type.PATH || cells[i][j].getOcup() != Cell.Ocup.NOTHING);
+        } while (!(cells[i][j].getType() == Cell.Type.PATH && cells[i][j].getOcup() == Cell.Ocup.NOTHING));
         cells[i][j].makeCamp();
-
-
     }
 
     public Cell[][] getCells()

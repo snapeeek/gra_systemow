@@ -1,6 +1,7 @@
 import Maze.Cell;
 
 import java.awt.*;
+import java.awt.event.WindowEvent;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -23,6 +24,7 @@ public class Client extends Thread
     Cell[][] cells;
     Point location, start;
     int death = 0, carried = 0, brought = 0;
+    ScheduledExecutorService executorService;
 
     public static void main(String[] args)
     {
@@ -58,9 +60,10 @@ public class Client extends Thread
         try
         {
             assert dos != null;
-            dos.writeUTF("Komunikat");
             assert dis != null;
-            System.out.println(dis.readUTF());
+            dos.writeUTF("player");
+
+
             location = new Point(dis.readInt(), dis.readInt());
             start = new Point(location.x, location.y);
 
@@ -70,7 +73,7 @@ public class Client extends Thread
             graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y +")\nWspolrzedne startowe: ( " + start.x + ", " + start.y + ")\nCarried: " + carried
                     + "\nBrought: " + brought + "\nDeaths: " + death + "\n\n\n" + legend);
 
-            ScheduledExecutorService executorService = Executors.newScheduledThreadPool(50);
+            executorService = Executors.newScheduledThreadPool(50);
             Socket finalSocket = socket;
             DataOutputStream finalDos = dos;
             DataInputStream finalDis = dis;
@@ -81,6 +84,11 @@ public class Client extends Thread
                     String msg = graphics.getCom();
                     System.out.println(msg);
                     finalDos.writeUTF(msg);
+                    if (msg.equals("exit"))
+                    {
+                        graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
+                        executorService.shutdown();
+                    }
                     graphics.resetCom();
                     //System.out.println("Obieram mape");
                     if (finalDis.readUTF().equals("mapa"))
@@ -101,6 +109,7 @@ public class Client extends Thread
 
                 } catch (IOException | ClassNotFoundException e)
                 {
+                    executorService.shutdown();
                     e.printStackTrace();
                 }
 
@@ -110,6 +119,7 @@ public class Client extends Thread
         }
         catch (IOException | ClassNotFoundException e)
         {
+            executorService.shutdown();
             e.printStackTrace();
         }
     }

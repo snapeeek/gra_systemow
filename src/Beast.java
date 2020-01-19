@@ -15,21 +15,19 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class Bot extends Thread
+public class Beast extends Thread
 {
-    final String legend = "Legend: \n" + "1234 - players\n" + "c - 1 coin\n" + "t - 10 coins\n" + "T - 50 coins\n" + "* - beast\n" + "# - bushes (slowdown)";
     final String IP = "127.0.0.1";
     final int PORT = 5005;
     final long period = 1000;
     Cell[][] cells;
-    Point location, start;
-    int death = 0, carried = 0, brought = 0;
+    Point location;
     String komunikat;
 
     public static void main(String[] args)
     {
-        var bot = new Bot();
-        bot.start();
+        var beast = new Beast();
+        beast.start();
     }
 
     @Override
@@ -61,15 +59,12 @@ public class Bot extends Thread
         {
             assert dos != null;
             assert dis != null;
-            dos.writeUTF("bot");
+            dos.writeUTF("beast");
+
 
             location = new Point(dis.readInt(), dis.readInt());
-            start = new Point(location.x, location.y);
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             cells = (Cell[][]) ois.readObject();
-            Graphics graphics = new Graphics("Bot", cells);
-            graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y +")\nWspolrzedne startowe: ( " + start.x + ", " + start.y + ")\nCarried: " + carried
-                    + "\nBrought: " + brought + "\nDeaths: " + death + "\n\n\n" + legend);
 
             ScheduledExecutorService executorService = Executors.newScheduledThreadPool(50);
 
@@ -88,7 +83,6 @@ public class Bot extends Thread
                     System.out.println(msg);
 
                     finalDos.writeUTF(msg);
-                    graphics.resetCom();
                     if (finalDis.readUTF().equals("mapa"))
                     {
                         Cell[][] temporary = (Cell[][]) ois.readUnshared();
@@ -97,13 +91,6 @@ public class Bot extends Thread
                     int x = finalDis.readInt();
                     int y = finalDis.readInt();
                     location.setLocation(x,y);
-                    carried = finalDis.readInt();
-                    brought = finalDis.readInt();
-                    death = finalDis.readInt();
-                    graphics.setArray(cells);
-                    graphics.repaintBoard();
-                    graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y +")\nWspolrzedne startowe: ( " + start.x + ", " + start.y + ")\nCarried: " + carried
-                            + "\nBrought: " + brought + "\nDeaths: " + death + "\n\n\n" + legend);
                     finalDos.flush();
 
                 } catch (IOException | ClassNotFoundException e)
@@ -153,18 +140,6 @@ public class Bot extends Thread
         return possible;
     }
 
-    /*String getOpposite(String dir)
-    {
-        if (dir.equals("up"))
-            return "down";
-        else if (dir.equals("down"))
-            return "up";
-        else if (dir.equals("left"))
-            return "right";
-        else if (dir.equals("right"))
-            return "right";
-        else
-            return "nothing";
-    }*/
+
 }
 

@@ -4,10 +4,8 @@ import Maze.MazeGenerator;
 import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.io.*;
-import java.lang.ref.Reference;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.Executors;
@@ -16,9 +14,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-//TODO dodanie obsługi dodawania bestii i pieniążków
+//TODO dodanie obsługi dodawania bestii
 //FIXME ogarnąć dodawanie do czterech socketów
-//FIXME kolizje
 
 public class Server
 {
@@ -32,6 +29,8 @@ public class Server
     static Graphics graphics;
     static AtomicInteger playerCount = new AtomicInteger(0);
     static Semaphore cellsOps = new Semaphore(1);
+    static Semaphore isPlayingOps = new Semaphore(1);
+    boolean[] isPlaying = {false, false, false, false};
     String com = "";
 
     Server()
@@ -52,6 +51,14 @@ public class Server
             Handler handler1 = new Handler(botsocket, cellsOps);
             handler1.start();
 
+            Socket botsocket2 = serverSocket.accept();
+            Handler handler2 = new Handler(botsocket2, cellsOps);
+            handler2.start();
+
+            Socket botsocket3 = serverSocket.accept();
+            Handler handler3 = new Handler(botsocket3, cellsOps);
+            handler3.start();
+
         } catch (IOException e)
         {
             e.printStackTrace();
@@ -66,6 +73,7 @@ public class Server
     class Handler extends Thread
     {
         final Socket socket;
+        String type;
         DataInputStream dis;
         DataOutputStream dos;
         Point location;
@@ -80,12 +88,26 @@ public class Server
         ScheduledExecutorService executorService = null;
         boolean ded = false;
         Point deathLoc = null;
+        String com;
 
         Handler(Socket socket, Semaphore sem)
         {
             this.socket = socket;
             this.semaphore = sem;
-            playerNumber = playerCount.addAndGet(1);
+
+            isPlayingOps.tryAcquire();
+            for (int i = 0; i < isPlaying.length; i++)
+            {
+                if (isPlaying[i] == false)
+                {
+                    playerNumber = i+1;
+                    isPlaying[i] = true;
+                    break;
+                }
+            }
+            isPlayingOps.release();
+            playerCount.addAndGet(1);
+
             try
             {
                 this.dis = new DataInputStream(socket.getInputStream());
@@ -105,8 +127,7 @@ public class Server
         {
             try
             {
-                System.out.println(dis.readUTF());
-                dos.writeUTF("Odebrano komunikat");
+                type = dis.readUTF();
 
                 dos.writeInt(location.x);
                 dos.writeInt(location.y);
@@ -118,53 +139,65 @@ public class Server
 
                 executorService = Executors.newScheduledThreadPool(50);
                 ScheduledExecutorService finalExecutorService = executorService;
-                Runnable sendAndReceive = () ->
+
+                if (type.equals("player") || type.equals("bot"))
                 {
-                    hasChanged = false;
-                    String msg;
-                    try
+                    Runnable sendAndReceive = () ->
                     {
-
-
-                        msg = dis.readUTF();
-                        if (ded)
-                            death();
-                        else
-                            playerAction(msg);
-
-
-                        if (hasChanged)
-                        {
-                            dos.writeUTF("mapa");
-
-                            Cell[][] sending = generateChunk(location);
-
-                            //System.out.println("Wysylam mape");
-                            oos.reset();
-                            oos.writeObject(sending.clone());
-
-                        } else
-                        {
-                            dos.writeUTF("nie");
-                        }
                         hasChanged = false;
+                        String moveMsg;
+                        try
+                        {
+                            moveMsg = dis.readUTF();
+                            if (moveMsg.equals("exit"))
+                            {
+                                executorService.shutdown();
+                                isPlayingOps.tryAcquire();
+                                isPlaying[playerNumber-1] = false;
+                                isPlayingOps.release();
+                                if (playerCount.addAndGet(-1) == 0)
+                                {
+                                    graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
+                                    System.out.println("Koniec gry");
+                                }
 
-                        dos.writeInt(location.x);
-                        dos.writeInt(location.y);
+                            }
+                            if (ded)
+                                death();
+                            else
+                                playerAction(moveMsg);
 
-                        dos.writeInt(carried);
-                        dos.writeInt(brought);
-                        dos.writeInt(deaths);
-                    }
-                    catch (IOException e)
-                    {
-                        e.printStackTrace();
-                        finalExecutorService.shutdown();
-                        graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
-                    }
-                };
-                executorService.scheduleAtFixedRate(sendAndReceive, interval, interval, TimeUnit.MILLISECONDS);
 
+                            if (hasChanged)
+                            {
+                                dos.writeUTF("mapa");
+
+                                Cell[][] sending = generateChunk(location);
+
+                                oos.reset();
+                                oos.writeObject(sending.clone());
+
+                            } else
+                            {
+                                dos.writeUTF("nie");
+                            }
+                            hasChanged = false;
+
+                            dos.writeInt(location.x);
+                            dos.writeInt(location.y);
+
+                            dos.writeInt(carried);
+                            dos.writeInt(brought);
+                            dos.writeInt(deaths);
+                        } catch (IOException e)
+                        {
+                            e.printStackTrace();
+                            finalExecutorService.shutdown();
+                            graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
+                        }
+                    };
+                    executorService.scheduleAtFixedRate(sendAndReceive, interval, interval, TimeUnit.MILLISECONDS);
+                }
             }
             catch (IOException e)
             {
