@@ -78,6 +78,7 @@ public class Server
         boolean inBushes = false;
         int bushesTime = 0;
         ScheduledExecutorService executorService = null;
+        boolean ded = false;
 
         Handler(Socket socket, Semaphore sem)
         {
@@ -125,7 +126,10 @@ public class Server
 
 
                         msg = dis.readUTF();
-                        playerAction(msg);
+                        if (ded)
+                            death();
+                        else
+                            playerAction(msg);
 
 
                         if (hasChanged)
@@ -223,8 +227,10 @@ public class Server
                     case "up":
                         if (location.y - 1 >= 0 && cells[location.x][location.y - 1].getType() == Cell.Type.PATH || cells[location.x][location.y - 1].getType() == Cell.Type.BUSHES && cells[location.x][location.y - 1].getOcup() == Cell.Ocup.NOTHING)
                         {
-                            if (cells[location.x][location.y-1].getOcup() == Cell.Ocup.PLAYER || (cells[location.x][location.y - 2].getOcup() == Cell.Ocup.PLAYER && location.y - 2 >= 0))
+                            if (cells[location.x][location.y-1].getOcup() == Cell.Ocup.PLAYER)
                             {
+                                Handler help = players.get(cells[location.x][location.y-1].getPlayerNum());
+                                help.ded = true;
                                 death();
                                 hasChanged = true;
                             }
@@ -260,8 +266,10 @@ public class Server
 
                         if (location.x + 1 < 60 && cells[location.x + 1][location.y].getType() == Cell.Type.PATH || cells[location.x + 1][location.y].getType() == Cell.Type.BUSHES)
                         {
-                            if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.PLAYER || (cells[location.x + 2][location.y].getOcup() == Cell.Ocup.PLAYER && location.x + 2 < 60))
+                            if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.PLAYER)
                             {
+                                Handler help = players.get(cells[location.x+1][location.y].getPlayerNum());
+                                help.ded = true;
                                 death();
                                 hasChanged = true;
                             } else
@@ -296,8 +304,10 @@ public class Server
 
                         if (location.y + 1 < 30 && cells[location.x][location.y + 1].getType() == Cell.Type.PATH || cells[location.x][location.y + 1].getType() == Cell.Type.BUSHES)
                         {
-                            if (cells[location.x][location.y+1].getOcup() == Cell.Ocup.PLAYER || (cells[location.x][location.y+2].getOcup() == Cell.Ocup.PLAYER && location.y + 2 < 30))
+                            if (cells[location.x][location.y+1].getOcup() == Cell.Ocup.PLAYER)
                             {
+                                Handler help = players.get(cells[location.x][location.y+1].getPlayerNum());
+                                help.ded = true;
                                 death();
                                 hasChanged = true;
                             } else
@@ -332,8 +342,10 @@ public class Server
 
                         if (location.x - 1 >= 0 && cells[location.x - 1][location.y].getType() == Cell.Type.PATH || cells[location.x - 1][location.y].getType() == Cell.Type.BUSHES )
                         {
-                            if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.PLAYER || (cells[location.x - 2][location.y].getOcup() == Cell.Ocup.PLAYER && location.x - 2 >= 0))
+                            if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.PLAYER)
                             {
+                                Handler help = players.get(cells[location.x-1][location.y].getPlayerNum());
+                                help.ded = true;
                                 death();
                                 hasChanged = true;
                             }
@@ -389,6 +401,7 @@ public class Server
             cells[location.x][location.y].setOcup(Cell.Ocup.PLAYER);
             cells[location.x][location.y].setPlayerNum(playerNumber);
             semaphore.release();
+            ded = false;
         }
 
 
