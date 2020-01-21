@@ -153,7 +153,7 @@ public class Graphics extends JFrame implements KeyListener
                         g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
                         if (cell[j].getOcup() == Cell.Ocup.BEAST)
                         {
-                            g.setColor(Color.BLACK);
+                            g.setColor(Color.RED);
                             g.drawString("*", cell[j].x+3, cell[j].y + CELL_HEIGHT - 3);
                         }
                         else if (cell[j].getOcup() == Cell.Ocup.COIN)

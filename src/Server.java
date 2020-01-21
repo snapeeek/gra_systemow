@@ -14,7 +14,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 //TODO dodanie obsługi dodawania bestii
-//FIXME ogarnąć dodawanie do czterech socketów
 
 public class Server
 {
@@ -33,7 +32,6 @@ public class Server
     static Semaphore isPlayingOps = new Semaphore(1);
     boolean[] isPlaying = {false, false, false, false};
     static ScheduledExecutorService serverExec;
-
     static String com = "";
 
     Server()
@@ -48,12 +46,12 @@ public class Server
             serverSocket = new ServerSocket(PORT);
             System.out.println("Serwer czeka na dwóch graczy");
             Socket socket = serverSocket.accept();
-            Handler handler = new Handler(socket, cellsOps);
+            Handler handler = new Handler(socket, cellsOps, false);
 
 
             System.out.println("Serwer czeka na jeszcze jednego gracza");
             Socket botsocket = serverSocket.accept();
-            Handler handler1 = new Handler(botsocket, cellsOps);
+            Handler handler1 = new Handler(botsocket, cellsOps, false);
 
 
             handler.start();
@@ -69,6 +67,8 @@ public class Server
                     addSth(Cell.Ocup.TREAS);
                 else if (com.equals("bigt"))
                     addSth(Cell.Ocup.BIGT);
+                else if (com.equals("beast"))
+                    addSth(Cell.Ocup.BEAST);
 
                 try
                 {
@@ -78,7 +78,7 @@ public class Server
                         Socket sock = serverSocket.accept();
                         if (sock != null)
                         {
-                            Handler newHandler = new Handler(sock, cellsOps);
+                            Handler newHandler = new Handler(sock, cellsOps, false);
                             newHandler.start();
                         }
                     }
@@ -87,7 +87,7 @@ public class Server
 
                 }catch (SocketTimeoutException e)
                 {
-                    System.out.println("well ye, noone connected");
+                    //System.out.println("well ye, noone connected");
                 }
                 catch (IOException e)
                 {
@@ -95,7 +95,7 @@ public class Server
                 }
             };
 
-            serverExec.scheduleAtFixedRate(check, interval/2, interval/2, TimeUnit.MILLISECONDS);
+            serverExec.scheduleAtFixedRate(check, interval, interval, TimeUnit.MILLISECONDS);
 
 
         } catch (IOException e)
@@ -108,8 +108,8 @@ public class Server
     {
         var Server = new Server();
     }
-    
-    static void addSth(Cell.Ocup ocup)
+
+    void addSth(Cell.Ocup ocup)
     {
         Random rand = new Random();
         int i, j;
@@ -125,7 +125,23 @@ public class Server
             cells[i][j].setOcup(Cell.Ocup.TREAS);
         else if (ocup == Cell.Ocup.BIGT)
             cells[i][j].setOcup(Cell.Ocup.BIGT);
-
+        else if (ocup == Cell.Ocup.BEAST)
+        {
+            var beast = new Beast();
+            beast.start();
+            Socket beastSocket = null;
+            try
+            {
+                beastSocket = serverSocket.accept();
+            } catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+            Handler beastHandler = new Handler(beastSocket, cellsOps, true);
+            beastHandler.start();
+        }
+        cellsOps.release();
+        graphics.resetCom();
         graphics.repaintBoard();
     }
 
@@ -147,26 +163,28 @@ public class Server
         ScheduledExecutorService executorService = null;
         boolean ded = false;
         Point deathLoc = null;
-        String com;
 
-        Handler(Socket socket, Semaphore sem)
+        Handler(Socket socket, Semaphore sem, boolean isBeast)
         {
             this.socket = socket;
             this.semaphore = sem;
 
-            isPlayingOps.tryAcquire();
-            for (int i = 0; i < isPlaying.length; i++)
+            if (!isBeast)
             {
-                if (isPlaying[i] == false)
+                isPlayingOps.tryAcquire();
+                for (int i = 0; i < isPlaying.length; i++)
                 {
-                    playerNumber = i+1;
-                    isPlaying[i] = true;
-                    break;
+                    if (isPlaying[i] == false)
+                    {
+                        playerNumber = i + 1;
+                        isPlaying[i] = true;
+                        break;
+                    }
                 }
+                isPlayingOps.release();
+                playerCount.addAndGet(1);
+                players.put(playerNumber, this);
             }
-            isPlayingOps.release();
-            playerCount.addAndGet(1);
-
             try
             {
                 this.dis = new DataInputStream(socket.getInputStream());
@@ -176,10 +194,13 @@ public class Server
                 e.printStackTrace();
             }
 
-            location = searchForCords();
+            if (isBeast)
+                location = searchForCords(true);
+            else
+                location = searchForCords(false);
             start = new Point(location.x, location.y);
-            players.put(playerNumber, this);
-            executorService = Executors.newScheduledThreadPool(50);
+
+            executorService = Executors.newScheduledThreadPool(10);
         }
 
         @Override
@@ -198,70 +219,77 @@ public class Server
 
                 ScheduledExecutorService finalExecutorService = executorService;
 
-                if (type.equals("player") || type.equals("bot"))
+                Runnable sendAndReceive = () ->
                 {
-                    Runnable sendAndReceive = () ->
+                    hasChanged = false;
+                    String moveMsg;
+                    try
                     {
-                        hasChanged = false;
-                        String moveMsg;
-                        try
+                        moveMsg = dis.readUTF();
+                        if (moveMsg.equals("exit") && !type.equals("beast"))
                         {
-                            moveMsg = dis.readUTF();
-                            if (moveMsg.equals("exit"))
+                            executorService.shutdown();
+                            isPlayingOps.tryAcquire();
+                            isPlaying[playerNumber - 1] = false;
+                            isPlayingOps.release();
+                            players.remove(playerNumber);
+                            if (playerCount.addAndGet(-1) == 0)
                             {
-                                executorService.shutdown();
-                                isPlayingOps.tryAcquire();
-                                isPlaying[playerNumber-1] = false;
-                                isPlayingOps.release();
-                                players.remove(playerNumber);
-                                if (playerCount.addAndGet(-1) == 0)
-                                {
-                                    System.out.println("Koniec gry");
-                                    graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
-                                    serverExec.shutdown();
-                                }
-                                cellsOps.tryAcquire();
-                                cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
-                                cellsOps.release();
+                                System.out.println("Koniec gry");
+                                graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
+                                serverExec.shutdown();
                             }
-                            if (ded)
-                                death();
-                            else
-                                playerAction(moveMsg);
+                            cellsOps.tryAcquire();
+                            cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
+                            cellsOps.release();
+                        }
+                        if (ded)
+                        {
+                            death();
+                        }
+                        else
+                            playerAction(moveMsg);
 
 
-                            if (hasChanged)
-                            {
-                                dos.writeUTF("mapa");
+                        if (hasChanged || ded)
+                        {
+                            ded = false;
+                            dos.writeUTF("mapa");
 
-                                Cell[][] sending = generateChunk(location);
+                            Cell[][] sending = generateChunk(location);
 
-                                oos.reset();
-                                oos.writeObject(sending.clone());
+                            oos.reset();
+                            oos.writeObject(sending.clone());
 
-                            } else
-                            {
-                                dos.writeUTF("nie");
-                            }
-                            hasChanged = false;
+                        } else
+                        {
+                            dos.writeUTF("nie");
+                        }
 
-                            dos.writeInt(location.x);
-                            dos.writeInt(location.y);
+                        hasChanged = false;
 
+                        dos.writeInt(location.x);
+                        dos.writeInt(location.y);
+
+                        if (type.equals("player") || type.equals("bot"))
+                        {
                             dos.writeInt(carried);
                             dos.writeInt(brought);
                             dos.writeInt(deaths);
-                        } catch (IOException e)
-                        {
-                            e.printStackTrace();
-                            System.out.println("FORCE EXIT. SERVBR IS SHUTTING DOWN");
-                            finalExecutorService.shutdown();
-                            serverExec.shutdown();
-                            graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
                         }
-                    };
-                    executorService.scheduleAtFixedRate(sendAndReceive, interval, interval, TimeUnit.MILLISECONDS);
-                }
+                        //dis.reset();
+                        dos.flush();
+                    } catch (IOException e)
+                    {
+                        e.printStackTrace();
+                        System.out.println("FORCE EXIT. SERVBR IS SHUTTING DOWN");
+                        finalExecutorService.shutdown();
+                        serverExec.shutdown();
+                        graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
+                    }
+                };
+                executorService.scheduleAtFixedRate(sendAndReceive, interval, interval, TimeUnit.MILLISECONDS);
+
             }
             catch (IOException e)
             {
@@ -273,7 +301,7 @@ public class Server
             }
         }
 
-        Point searchForCords()
+        Point searchForCords(boolean isBeast)
         {
             Random random = new Random();
             int x, y;
@@ -284,8 +312,13 @@ public class Server
                 y = random.nextInt(BOARD_HEIGHT);
 
             } while (cells[x][y].getType() != Cell.Type.PATH);
-            cells[x][y].setOcup(Cell.Ocup.PLAYER);
-            cells[x][y].setPlayerNum(playerNumber);
+            if (!isBeast)
+            {
+                cells[x][y].setOcup(Cell.Ocup.PLAYER);
+                cells[x][y].setPlayerNum(playerNumber);
+            }
+            else
+                cells[x][y].setOcup(Cell.Ocup.BEAST);
 
             semaphore.release();
             return new Point(x,y);
@@ -333,32 +366,36 @@ public class Server
                                 Handler help = players.get(cells[location.x][location.y-1].getPlayerNum());
                                 help.deathLoc = (Point)location.clone();
                                 help.ded = true;
-                                death();
+                                if (type.equals("player") || type.equals("bot"))
+                                    death();
                                 hasChanged = true;
                             }
                             else
                             {
                                 semaphore.tryAcquire();
                                 cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
-                                if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.COIN)
-                                    carried++;
-                                else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.TREAS)
-                                    carried += 10;
-                                else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.BIGT)
-                                    carried += 50;
-                                else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.DEAD)
+                                if (type.equals("player") || type.equals("bot"))
                                 {
-                                    carried += cells[location.x][location.y - 1].getCoins();
-                                    cells[location.x][location.y - 1].setCoins(0);
-                                }
-                                else if (cells[location.x][location.y - 1].isCamp())
-                                {
-                                    brought += carried;
-                                    carried = 0;
-                                }
+                                    if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.COIN)
+                                        carried++;
+                                    else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.TREAS)
+                                        carried += 10;
+                                    else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.BIGT)
+                                        carried += 50;
+                                    else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.DEAD)
+                                    {
+                                        carried += cells[location.x][location.y - 1].getCoins();
+                                        cells[location.x][location.y - 1].setCoins(0);
+                                    } else if (cells[location.x][location.y - 1].isCamp())
+                                    {
+                                        brought += carried;
+                                        carried = 0;
+                                    }
 
-                                cells[location.x][location.y - 1].setOcup(Cell.Ocup.PLAYER);
-                                cells[location.x][location.y - 1].setPlayerNum(playerNumber);
+                                    cells[location.x][location.y - 1].setOcup(Cell.Ocup.PLAYER);
+                                    cells[location.x][location.y - 1].setPlayerNum(playerNumber);
+                                }
+                                else cells[location.x][location.y - 1].setOcup(Cell.Ocup.BEAST);
 
                                 if (cells[location.x][location.y - 1].getType() == Cell.Type.BUSHES)
                                 {
@@ -381,31 +418,35 @@ public class Server
                                 Handler help = players.get(cells[location.x+1][location.y].getPlayerNum());
                                 help.deathLoc = (Point)location.clone();
                                 help.ded = true;
-                                death();
+                                if (type.equals("player") || type.equals("bot"))
+                                    death();
                                 hasChanged = true;
                             } else
                             {
                                 semaphore.tryAcquire();
                                 cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
-                                if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.COIN)
-                                    carried++;
-                                else if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.TREAS)
-                                    carried += 10;
-                                else if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.BIGT)
-                                    carried += 50;
-                                else if (cells[location.x+1][location.y].getOcup() == Cell.Ocup.DEAD)
+                                if (type.equals("player") || type.equals("bot"))
                                 {
-                                    carried += cells[location.x + 1][location.y].getCoins();
-                                    cells[location.x + 1][location.y].setCoins(0);
-                                }
-                                else if (cells[location.x+1][location.y].isCamp())
-                                {
-                                    brought += carried;
-                                    carried = 0;
-                                }
+                                    if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.COIN)
+                                        carried++;
+                                    else if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.TREAS)
+                                        carried += 10;
+                                    else if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.BIGT)
+                                        carried += 50;
+                                    else if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.DEAD)
+                                    {
+                                        carried += cells[location.x + 1][location.y].getCoins();
+                                        cells[location.x + 1][location.y].setCoins(0);
+                                    } else if (cells[location.x + 1][location.y].isCamp())
+                                    {
+                                        brought += carried;
+                                        carried = 0;
+                                    }
 
-                                cells[location.x + 1][location.y].setOcup(Cell.Ocup.PLAYER);
-                                cells[location.x + 1][location.y].setPlayerNum(playerNumber);
+                                    cells[location.x + 1][location.y].setOcup(Cell.Ocup.PLAYER);
+                                    cells[location.x + 1][location.y].setPlayerNum(playerNumber);
+                                }
+                                else cells[location.x + 1][location.y].setOcup(Cell.Ocup.BEAST);
 
                                 if (cells[location.x + 1][location.y].getType() == Cell.Type.BUSHES)
                                 {
@@ -428,32 +469,35 @@ public class Server
                                 Handler help = players.get(cells[location.x][location.y+1].getPlayerNum());
                                 help.deathLoc = (Point)location.clone();
                                 help.ded = true;
-                                death();
+                                if (type.equals("player") || type.equals("bot"))
+                                    death();
                                 hasChanged = true;
                             } else
                             {
                                 semaphore.tryAcquire();
                                 cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
-                                if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.COIN)
-                                    carried++;
-                                else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.TREAS)
-                                    carried += 10;
-                                else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.BIGT)
-                                    carried += 50;
-                                else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.DEAD)
+                                if (type.equals("player") || type.equals("bot"))
                                 {
-                                    carried += cells[location.x][location.y + 1].getCoins();
-                                    cells[location.x][location.y + 1].setCoins(0);
+                                    if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.COIN)
+                                        carried++;
+                                    else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.TREAS)
+                                        carried += 10;
+                                    else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.BIGT)
+                                        carried += 50;
+                                    else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.DEAD)
+                                    {
+                                        carried += cells[location.x][location.y + 1].getCoins();
+                                        cells[location.x][location.y + 1].setCoins(0);
+                                    } else if (cells[location.x][location.y + 1].isCamp())
+                                    {
+                                        brought += carried;
+                                        carried = 0;
+                                    }
+                                    cells[location.x][location.y + 1].setOcup(Cell.Ocup.PLAYER);
+                                    cells[location.x][location.y + 1].setPlayerNum(playerNumber);
                                 }
-                                else if (cells[location.x][location.y + 1].isCamp())
-                                {
-                                    brought += carried;
-                                    carried = 0;
-                                }
+                                else cells[location.x][location.y + 1].setOcup(Cell.Ocup.BEAST);
 
-
-                                cells[location.x][location.y + 1].setOcup(Cell.Ocup.PLAYER);
-                                cells[location.x][location.y + 1].setPlayerNum(playerNumber);
 
                                 if (cells[location.x][location.y + 1].getType() == Cell.Type.BUSHES)
                                 {
@@ -476,32 +520,37 @@ public class Server
                                 Handler help = players.get(cells[location.x-1][location.y].getPlayerNum());
                                 help.deathLoc = (Point)location.clone();
                                 help.ded = true;
-                                death();
+                                if (type.equals("player") || type.equals("bot"))
+                                    death();
                                 hasChanged = true;
                             }
                             else
                             {
                                 semaphore.tryAcquire();
                                 cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
-                                if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.COIN)
-                                    carried++;
-                                else if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.TREAS)
-                                    carried += 10;
-                                else if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.BIGT)
-                                    carried += 50;
-                                else if (cells[location.x-1][location.y].getOcup() == Cell.Ocup.DEAD)
+                                if (type.equals("player") || type.equals("bot"))
                                 {
-                                    carried += cells[location.x - 1][location.y].getCoins();
-                                    cells[location.x - 1][location.y].setCoins(0);
-                                }
-                                else if (cells[location.x-1][location.y].isCamp())
-                                {
-                                    brought += carried;
-                                    carried = 0;
-                                }
+                                    if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.COIN)
+                                        carried++;
+                                    else if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.TREAS)
+                                        carried += 10;
+                                    else if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.BIGT)
+                                        carried += 50;
+                                    else if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.DEAD)
+                                    {
+                                        carried += cells[location.x - 1][location.y].getCoins();
+                                        cells[location.x - 1][location.y].setCoins(0);
+                                    } else if (cells[location.x - 1][location.y].isCamp())
+                                    {
+                                        brought += carried;
+                                        carried = 0;
+                                    }
 
-                                cells[location.x - 1][location.y].setOcup(Cell.Ocup.PLAYER);
-                                cells[location.x - 1][location.y].setPlayerNum(playerNumber);
+                                    cells[location.x - 1][location.y].setOcup(Cell.Ocup.PLAYER);
+                                    cells[location.x - 1][location.y].setPlayerNum(playerNumber);
+                                }
+                                else cells[location.x - 1][location.y].setOcup(Cell.Ocup.BEAST);
+
 
                                 if (cells[location.x - 1][location.y].getType() == Cell.Type.BUSHES)
                                 {
@@ -550,9 +599,6 @@ public class Server
             cells[location.x][location.y].setOcup(Cell.Ocup.PLAYER);
             cells[location.x][location.y].setPlayerNum(playerNumber);
             semaphore.release();
-            ded = false;
         }
-
-
     }
 }
