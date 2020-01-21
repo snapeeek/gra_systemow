@@ -118,6 +118,7 @@ public class Bot extends Thread
 
                 } catch (IOException | ClassNotFoundException e)
                 {
+                    executorService.shutdown();
                     e.printStackTrace();
                 }
 
@@ -127,6 +128,7 @@ public class Bot extends Thread
         }
         catch (IOException | ClassNotFoundException e)
         {
+            executorService.shutdown();
             e.printStackTrace();
         }
     }

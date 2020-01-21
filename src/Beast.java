@@ -10,10 +10,10 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class Beast extends Thread
 {
@@ -22,13 +22,10 @@ public class Beast extends Thread
     final long period = 1000;
     Cell[][] cells;
     Point location;
+    int hauntedPlayer = -1;
+    ArrayList<String> nextCell = new ArrayList<>();
+    ArrayList<String> possibleMoves = new ArrayList<>();
     String komunikat;
-
-    public static void main(String[] args)
-    {
-        var beast = new Beast();
-        beast.start();
-    }
 
     @Override
     public void run()
@@ -70,19 +67,25 @@ public class Beast extends Thread
 
             DataOutputStream finalDos = dos;
             DataInputStream finalDis = dis;
-            //final String[] lastDirection = {null};
             Runnable sendAndReceive = () ->
             {
                 try
                 {
-                    ArrayList<String> moves = checkMoves();
-                    SecureRandom random = new SecureRandom();
-                    String msg;
-                    msg = moves.get(random.nextInt(moves.size()));
-                    //lastDirection[0] = msg;
-                    System.out.println(msg);
+                    if (isPlayerVisible())
+                        pursuit(location.x, location.y);
+                    else
+                         possibleMoves = checkMoves();
 
-                    finalDos.writeUTF(msg);
+                    if (nextCell.size() != 0)
+                    {
+                        finalDos.writeUTF(nextCell.remove(nextCell.size()-1));
+                    }
+                    else
+                    {
+                        Random rand = new Random();
+                        finalDos.writeUTF(possibleMoves.get(rand.nextInt(possibleMoves.size())));
+                    }
+
                     if (finalDis.readUTF().equals("mapa"))
                     {
                         Cell[][] temporary = (Cell[][]) ois.readUnshared();
@@ -122,6 +125,55 @@ public class Beast extends Thread
         return sock;
     }
 
+    boolean isPlayerVisible()
+    {
+        int tab[] = {-2,-1,0,1,2};
+        for (int i:tab)
+        {
+            for (int j:tab)
+            {
+                if (cells[location.x + i][location.y + j].getOcup() == Cell.Ocup.PLAYER && location.x + i >= 0 && location.x + i < 60 && location.y + j >= 0 && location.y + j < 30)
+                {
+                    hauntedPlayer = cells[location.x + i][location.y + j].getPlayerNum();
+                    return true;
+                }
+            }
+        }
+        hauntedPlayer = -1;
+        return false;
+    }
+
+    boolean pursuit(int x, int y)
+    {
+        nextCell = new ArrayList<>();
+        if (cells[x][y].getType() == Cell.Type.UNSEEN || cells[x][y].getType() == Cell.Type.WALL || !(x >= 0 && x < 60 && y >= 0 && y < 30)) return false;
+        if (cells[x][y].getOcup() == Cell.Ocup.PLAYER && cells[x][y].getPlayerNum() == hauntedPlayer)
+        {
+            return true;
+        }
+        if (pursuit(x - 1, y))
+        {
+            nextCell.add("left");
+            return true;
+        }
+        if (pursuit(x, y - 1))
+        {
+            nextCell.add("up");
+            return true;
+        }
+        if (pursuit(x + 1, y))
+        {
+            nextCell.add("right");
+            return true;
+        }
+        if (pursuit(x, y + 1))
+        {
+            nextCell.add("down");
+            return true;
+        }
+        return false;
+    }
+
     ArrayList<String> checkMoves()
     {
         ArrayList<String> possible = new ArrayList<>();
@@ -139,7 +191,6 @@ public class Beast extends Thread
 
         return possible;
     }
-
 
 }
 
