@@ -150,10 +150,10 @@ public class Bot extends Thread
     ArrayList<String> checkMoves()
     {
         ArrayList<String> possible = new ArrayList<>();
-        if (location.x+1 >= 0 && cells[location.x-1][location.y].getType() != Cell.Type.WALL)
+        if (location.x - 1 >= 0 && cells[location.x-1][location.y].getType() != Cell.Type.WALL)
             possible.add("left");
 
-        if (location.x+1 < 60 && cells[location.x+1][location.y].getType() != Cell.Type.WALL)
+        if (location.x + 1 < 60 && cells[location.x+1][location.y].getType() != Cell.Type.WALL)
             possible.add("right");
 
         if (location.y - 1 >= 0 && cells[location.x][location.y-1].getType() != Cell.Type.WALL)

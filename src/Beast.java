@@ -20,12 +20,19 @@ public class Beast extends Thread
     final String IP = "127.0.0.1";
     final int PORT = 5005;
     final long period = 1000;
-    Cell[][] cells;
+    Cell[][] cells = null;
     Point location;
     int hauntedPlayer = -1;
     ArrayList<String> nextCell = new ArrayList<>();
-    ArrayList<String> possibleMoves = new ArrayList<>();
+    ArrayList<String> possibleMoves;
     String komunikat;
+    Graphics graphics;
+
+    Beast()
+    {
+        graphics = new Graphics("beast", cells);
+        graphics.setVisible(true);
+    }
 
     @Override
     public void run()
@@ -63,7 +70,7 @@ public class Beast extends Thread
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             cells = (Cell[][]) ois.readObject();
 
-            ScheduledExecutorService executorService = Executors.newScheduledThreadPool(50);
+            ScheduledExecutorService executorService = Executors.newScheduledThreadPool(10);
 
             DataOutputStream finalDos = dos;
             DataInputStream finalDis = dis;
@@ -71,12 +78,15 @@ public class Beast extends Thread
             {
                 try
                 {
-                    if (isPlayerVisible())
-                        pursuit(location.x, location.y);
-                    else
-                         possibleMoves = checkMoves();
+                    if (isPlayerVisible() && nextCell.isEmpty())
+                    {
+                        nextCell.clear();
+                        pursuit(location.x, location.y, 0);
+                    }
 
-                    if (nextCell.size() != 0)
+                    possibleMoves = checkMoves();
+
+                    if (nextCell.size() > 0)
                     {
                         finalDos.writeUTF(nextCell.remove(nextCell.size()-1));
                     }
@@ -94,6 +104,8 @@ public class Beast extends Thread
                     int x = finalDis.readInt();
                     int y = finalDis.readInt();
                     location.setLocation(x,y);
+                    graphics.setArray(cells);
+                    graphics.repaintBoard();
                     finalDos.flush();
 
                 } catch (IOException | ClassNotFoundException e)
@@ -128,11 +140,11 @@ public class Beast extends Thread
     boolean isPlayerVisible()
     {
         int tab[] = {-2,-1,0,1,2};
-        for (int i:tab)
+        for (int i = -2; i <= 2; i++)
         {
-            for (int j:tab)
+            for (int j = -2; j <= 2; j++)
             {
-                if (cells[location.x + i][location.y + j].getOcup() == Cell.Ocup.PLAYER && location.x + i >= 0 && location.x + i < 60 && location.y + j >= 0 && location.y + j < 30)
+                if (location.x + i >= 0 && location.x + i < 60 && location.y + j >= 0 && location.y + j < 30 && cells[location.x + i][location.y + j].getOcup() == Cell.Ocup.PLAYER)
                 {
                     hauntedPlayer = cells[location.x + i][location.y + j].getPlayerNum();
                     return true;
@@ -143,44 +155,46 @@ public class Beast extends Thread
         return false;
     }
 
-    boolean pursuit(int x, int y)
+    boolean pursuit(int x, int y, int counter)
     {
-        nextCell = new ArrayList<>();
-        if (cells[x][y].getType() == Cell.Type.UNSEEN || cells[x][y].getType() == Cell.Type.WALL || !(x >= 0 && x < 60 && y >= 0 && y < 30)) return false;
-        if (cells[x][y].getOcup() == Cell.Ocup.PLAYER && cells[x][y].getPlayerNum() == hauntedPlayer)
+        if (!(x >= 0 && x < 60 && y >= 0 && y < 30) || cells[x][y].getType() == Cell.Type.UNSEEN || cells[x][y].getType() == Cell.Type.WALL || counter > 5 || cells[x][y].isMarked())
         {
-            return true;
+            cells[x][y].makeMarked();
+            return false;
         }
-        if (pursuit(x - 1, y))
+        if (cells[x][y].getOcup() == Cell.Ocup.PLAYER && cells[x][y].getPlayerNum() == hauntedPlayer)
+            return true;
+        if (pursuit(x - 1, y,counter+ 1))
         {
             nextCell.add("left");
             return true;
         }
-        if (pursuit(x, y - 1))
+        if (pursuit(x, y - 1,counter + 1))
         {
             nextCell.add("up");
             return true;
         }
-        if (pursuit(x + 1, y))
+        if (pursuit(x + 1, y, counter + 1))
         {
             nextCell.add("right");
             return true;
         }
-        if (pursuit(x, y + 1))
+        if (pursuit(x, y + 1, counter + 1))
         {
             nextCell.add("down");
             return true;
         }
+        cells[x][y].makeMarked();
         return false;
     }
 
     ArrayList<String> checkMoves()
     {
         ArrayList<String> possible = new ArrayList<>();
-        if (location.x+1 >= 0 && cells[location.x-1][location.y].getType() != Cell.Type.WALL)
+        if (location.x - 1 >= 0 && cells[location.x-1][location.y].getType() != Cell.Type.WALL)
             possible.add("left");
 
-        if (location.x+1 < 60 && cells[location.x+1][location.y].getType() != Cell.Type.WALL)
+        if (location.x + 1 < 60 && cells[location.x+1][location.y].getType() != Cell.Type.WALL)
             possible.add("right");
 
         if (location.y - 1 >= 0 && cells[location.x][location.y-1].getType() != Cell.Type.WALL)

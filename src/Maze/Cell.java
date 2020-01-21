@@ -30,6 +30,7 @@ public class Cell implements Serializable
     int playerNum;
     int coins = 0;
     boolean isCamp = false;
+    boolean isMarked = false;
 
     public Cell(Type type, Ocup ocup, int x, int y)
     {
@@ -103,5 +104,15 @@ public class Cell implements Serializable
     public int getCoins()
     {
         return coins;
+    }
+
+    public boolean isMarked()
+    {
+        return isMarked;
+    }
+
+    public void makeMarked()
+    {
+        isMarked = true;
     }
 }

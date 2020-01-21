@@ -87,7 +87,7 @@ public class Server
 
                 }catch (SocketTimeoutException e)
                 {
-                    System.out.println("well ye, noone connected");
+                    //System.out.println("well ye, noone connected");
                 }
                 catch (IOException e)
                 {
@@ -95,7 +95,7 @@ public class Server
                 }
             };
 
-            serverExec.scheduleAtFixedRate(check, interval/2, interval/2, TimeUnit.MILLISECONDS);
+            serverExec.scheduleAtFixedRate(check, interval, interval, TimeUnit.MILLISECONDS);
 
 
         } catch (IOException e)
@@ -200,7 +200,7 @@ public class Server
                 location = searchForCords(false);
             start = new Point(location.x, location.y);
 
-            executorService = Executors.newScheduledThreadPool(50);
+            executorService = Executors.newScheduledThreadPool(10);
         }
 
         @Override
@@ -244,13 +244,16 @@ public class Server
                             cellsOps.release();
                         }
                         if (ded)
+                        {
                             death();
+                        }
                         else
                             playerAction(moveMsg);
 
 
-                        if (hasChanged)
+                        if (hasChanged || ded)
                         {
+                            ded = false;
                             dos.writeUTF("mapa");
 
                             Cell[][] sending = generateChunk(location);
@@ -263,9 +266,6 @@ public class Server
                             dos.writeUTF("nie");
                         }
 
-
-
-
                         hasChanged = false;
 
                         dos.writeInt(location.x);
@@ -277,6 +277,8 @@ public class Server
                             dos.writeInt(brought);
                             dos.writeInt(deaths);
                         }
+                        //dis.reset();
+                        dos.flush();
                     } catch (IOException e)
                     {
                         e.printStackTrace();
@@ -597,7 +599,6 @@ public class Server
             cells[location.x][location.y].setOcup(Cell.Ocup.PLAYER);
             cells[location.x][location.y].setPlayerNum(playerNumber);
             semaphore.release();
-            ded = false;
         }
     }
 }
