@@ -6,12 +6,11 @@ import java.awt.event.WindowEvent;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Random;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 //TODO dodanie obsługi dodawania bestii
@@ -19,11 +18,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Server
 {
-    ServerSocket serverSocket;
+    static ServerSocket serverSocket;
     static final int PORT = 5005;
     static final int interval = 1000; //1000ms = 1s
     public static final int CELL_WIDTH = 10;
     public static final int CELL_HEIGTH = 15;
+    public static final int BOARD_WIDTH = 60;
+    public static final int BOARD_HEIGHT = 30;
     HashMap<Integer, Handler> players = new HashMap<>();
     static Cell[][] cells;
     static Graphics graphics;
@@ -31,11 +32,13 @@ public class Server
     static Semaphore cellsOps = new Semaphore(1);
     static Semaphore isPlayingOps = new Semaphore(1);
     boolean[] isPlaying = {false, false, false, false};
-    String com = "";
+    static ScheduledExecutorService serverExec;
+
+    static String com = "";
 
     Server()
     {
-        MazeGenerator mazeGenerator = new MazeGenerator(60, 30);
+        MazeGenerator mazeGenerator = new MazeGenerator(BOARD_WIDTH, BOARD_HEIGHT);
         cells = mazeGenerator.getCells();
 
         System.out.println("Server is currently running.");
@@ -43,21 +46,57 @@ public class Server
         {
             graphics = new Graphics("Server", cells);
             serverSocket = new ServerSocket(PORT);
+            System.out.println("Serwer czeka na dwóch graczy");
             Socket socket = serverSocket.accept();
             Handler handler = new Handler(socket, cellsOps);
-            handler.start();
 
+
+            System.out.println("Serwer czeka na jeszcze jednego gracza");
             Socket botsocket = serverSocket.accept();
             Handler handler1 = new Handler(botsocket, cellsOps);
+
+
+            handler.start();
             handler1.start();
+            serverExec = Executors.newScheduledThreadPool(50);
 
-            Socket botsocket2 = serverSocket.accept();
-            Handler handler2 = new Handler(botsocket2, cellsOps);
-            handler2.start();
+            Runnable check = () ->
+            {
+                com = graphics.getCom();
+                if (com.equals("coin"))
+                    addSth(Cell.Ocup.COIN);
+                else if (com.equals("treas"))
+                    addSth(Cell.Ocup.TREAS);
+                else if (com.equals("bigt"))
+                    addSth(Cell.Ocup.BIGT);
 
-            Socket botsocket3 = serverSocket.accept();
-            Handler handler3 = new Handler(botsocket3, cellsOps);
-            handler3.start();
+                try
+                {
+                    if (playerCount.get() < 4)
+                    {
+                        serverSocket.setSoTimeout(50);
+                        Socket sock = serverSocket.accept();
+                        if (sock != null)
+                        {
+                            Handler newHandler = new Handler(sock, cellsOps);
+                            newHandler.start();
+                        }
+                    }
+                } catch (SocketException e)
+                {
+
+                }catch (SocketTimeoutException e)
+                {
+                    System.out.println("well ye, noone connected");
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+            };
+
+            serverExec.scheduleAtFixedRate(check, interval/2, interval/2, TimeUnit.MILLISECONDS);
+
 
         } catch (IOException e)
         {
@@ -68,6 +107,26 @@ public class Server
     public static void main(String[] args)
     {
         var Server = new Server();
+    }
+    
+    static void addSth(Cell.Ocup ocup)
+    {
+        Random rand = new Random();
+        int i, j;
+        do
+        {
+            i = rand.nextInt(BOARD_WIDTH);
+            j = rand.nextInt(BOARD_HEIGHT);
+        } while (!(cells[i][j].getType() == Cell.Type.PATH && cells[i][j].getOcup() == Cell.Ocup.NOTHING));
+        cellsOps.tryAcquire();
+        if (ocup == Cell.Ocup.COIN)
+            cells[i][j].setOcup(Cell.Ocup.COIN);
+        else if (ocup == Cell.Ocup.TREAS)
+            cells[i][j].setOcup(Cell.Ocup.TREAS);
+        else if (ocup == Cell.Ocup.BIGT)
+            cells[i][j].setOcup(Cell.Ocup.BIGT);
+
+        graphics.repaintBoard();
     }
 
     class Handler extends Thread
@@ -120,6 +179,7 @@ public class Server
             location = searchForCords();
             start = new Point(location.x, location.y);
             players.put(playerNumber, this);
+            executorService = Executors.newScheduledThreadPool(50);
         }
 
         @Override
@@ -136,8 +196,6 @@ public class Server
                 ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
                 oos.writeObject(toSend);
 
-
-                executorService = Executors.newScheduledThreadPool(50);
                 ScheduledExecutorService finalExecutorService = executorService;
 
                 if (type.equals("player") || type.equals("bot"))
@@ -155,12 +213,16 @@ public class Server
                                 isPlayingOps.tryAcquire();
                                 isPlaying[playerNumber-1] = false;
                                 isPlayingOps.release();
+                                players.remove(playerNumber);
                                 if (playerCount.addAndGet(-1) == 0)
                                 {
-                                    graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
                                     System.out.println("Koniec gry");
+                                    graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
+                                    serverExec.shutdown();
                                 }
-
+                                cellsOps.tryAcquire();
+                                cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
+                                cellsOps.release();
                             }
                             if (ded)
                                 death();
@@ -192,7 +254,9 @@ public class Server
                         } catch (IOException e)
                         {
                             e.printStackTrace();
+                            System.out.println("FORCE EXIT. SERVBR IS SHUTTING DOWN");
                             finalExecutorService.shutdown();
+                            serverExec.shutdown();
                             graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
                         }
                     };
@@ -202,7 +266,9 @@ public class Server
             catch (IOException e)
             {
                 e.printStackTrace();
+                System.out.println("FORCE EXIT. SERVER IS SHUTTING DOWN");
                 executorService.shutdown();
+                serverExec.shutdown();
                 graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
             }
         }
@@ -214,8 +280,8 @@ public class Server
             semaphore.tryAcquire();
             do
             {
-                x = random.nextInt(60);
-                y = random.nextInt(30);
+                x = random.nextInt(BOARD_WIDTH);
+                y = random.nextInt(BOARD_HEIGHT);
 
             } while (cells[x][y].getType() != Cell.Type.PATH);
             cells[x][y].setOcup(Cell.Ocup.PLAYER);
@@ -228,10 +294,10 @@ public class Server
         Cell[][] generateChunk(Point location)
         {
             semaphore.tryAcquire();
-            Cell[][] toSend = new Cell[60][30];
-            for (int i = 0; i < 60; i++)
+            Cell[][] toSend = new Cell[BOARD_WIDTH][BOARD_HEIGHT];
+            for (int i = 0; i < BOARD_WIDTH; i++)
             {
-                for (int j = 0; j < 30; j++)
+                for (int j = 0; j < BOARD_HEIGHT; j++)
                 {
                     toSend[i][j] = new Cell(Cell.Type.UNSEEN, Cell.Ocup.NOTHING, i * CELL_WIDTH, j * CELL_HEIGTH);
                 }
@@ -241,7 +307,7 @@ public class Server
             {
                 for (int j : cords)
                 {
-                    if (location.x + i >= 0 && location.x + i < 60 && location.y + j >= 0 && location.y + j < 30)
+                    if (location.x + i >= 0 && location.x + i < BOARD_WIDTH && location.y + j >= 0 && location.y + j < BOARD_HEIGHT)
                     {
                         toSend[location.x + i][location.y + j] = cells[location.x + i][location.y + j];
                     }
@@ -308,7 +374,7 @@ public class Server
                         break;
                     case "right":
 
-                        if (location.x + 1 < 60 && cells[location.x + 1][location.y].getType() == Cell.Type.PATH || cells[location.x + 1][location.y].getType() == Cell.Type.BUSHES)
+                        if (location.x + 1 < BOARD_WIDTH && cells[location.x + 1][location.y].getType() == Cell.Type.PATH || cells[location.x + 1][location.y].getType() == Cell.Type.BUSHES)
                         {
                             if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.PLAYER)
                             {
@@ -355,7 +421,7 @@ public class Server
                         break;
                     case "down":
 
-                        if (location.y + 1 < 30 && cells[location.x][location.y + 1].getType() == Cell.Type.PATH || cells[location.x][location.y + 1].getType() == Cell.Type.BUSHES)
+                        if (location.y + 1 < BOARD_HEIGHT && cells[location.x][location.y + 1].getType() == Cell.Type.PATH || cells[location.x][location.y + 1].getType() == Cell.Type.BUSHES)
                         {
                             if (cells[location.x][location.y+1].getOcup() == Cell.Ocup.PLAYER)
                             {
@@ -463,7 +529,6 @@ public class Server
         private void death()
         {
             deaths++;
-
             semaphore.tryAcquire();
             if (deathLoc != null)
             {

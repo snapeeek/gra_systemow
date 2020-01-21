@@ -1,6 +1,7 @@
 import Maze.Cell;
 
 import java.awt.*;
+import java.awt.event.WindowEvent;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -24,7 +25,7 @@ public class Bot extends Thread
     Cell[][] cells;
     Point location, start;
     int death = 0, carried = 0, brought = 0;
-    String komunikat;
+    ScheduledExecutorService executorService;
 
     public static void main(String[] args)
     {
@@ -63,6 +64,7 @@ public class Bot extends Thread
             assert dis != null;
             dos.writeUTF("bot");
 
+
             location = new Point(dis.readInt(), dis.readInt());
             start = new Point(location.x, location.y);
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
@@ -71,7 +73,7 @@ public class Bot extends Thread
             graphics.setTextArea("Wspolrzedne: (" + location.x +", " + location.y +")\nWspolrzedne startowe: ( " + start.x + ", " + start.y + ")\nCarried: " + carried
                     + "\nBrought: " + brought + "\nDeaths: " + death + "\n\n\n" + legend);
 
-            ScheduledExecutorService executorService = Executors.newScheduledThreadPool(50);
+            executorService = Executors.newScheduledThreadPool(50);
 
             DataOutputStream finalDos = dos;
             DataInputStream finalDis = dis;
@@ -87,6 +89,14 @@ public class Bot extends Thread
                     //lastDirection[0] = msg;
                     System.out.println(msg);
 
+                    String graphMsg = graphics.getCom();
+
+                    if (graphMsg.equals("exit"))
+                    {
+                        finalDos.writeUTF(graphMsg);
+                        graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
+                        executorService.shutdown();
+                    }
                     finalDos.writeUTF(msg);
                     graphics.resetCom();
                     if (finalDis.readUTF().equals("mapa"))
