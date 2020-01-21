@@ -26,13 +26,7 @@ public class Beast extends Thread
     ArrayList<String> nextCell = new ArrayList<>();
     ArrayList<String> possibleMoves;
     String komunikat;
-    Graphics graphics;
 
-    Beast()
-    {
-        graphics = new Graphics("beast", cells);
-        graphics.setVisible(true);
-    }
 
     @Override
     public void run()
@@ -104,8 +98,6 @@ public class Beast extends Thread
                     int x = finalDis.readInt();
                     int y = finalDis.readInt();
                     location.setLocation(x,y);
-                    graphics.setArray(cells);
-                    graphics.repaintBoard();
                     finalDos.flush();
 
                 } catch (IOException | ClassNotFoundException e)
@@ -139,7 +131,6 @@ public class Beast extends Thread
 
     boolean isPlayerVisible()
     {
-        int tab[] = {-2,-1,0,1,2};
         for (int i = -2; i <= 2; i++)
         {
             for (int j = -2; j <= 2; j++)
@@ -157,11 +148,11 @@ public class Beast extends Thread
 
     boolean pursuit(int x, int y, int counter)
     {
-        if (!(x >= 0 && x < 60 && y >= 0 && y < 30) || cells[x][y].getType() == Cell.Type.UNSEEN || cells[x][y].getType() == Cell.Type.WALL || counter > 5 || cells[x][y].isMarked())
+        if (cells[x][y].isMarked() || !(x >= 0 && x < 60 && y >= 0 && y < 30) || cells[x][y].getType() == Cell.Type.UNSEEN || cells[x][y].getType() == Cell.Type.WALL || counter > 5)
         {
-            cells[x][y].makeMarked();
             return false;
         }
+        cells[x][y].makeMarked();
         if (cells[x][y].getOcup() == Cell.Ocup.PLAYER && cells[x][y].getPlayerNum() == hauntedPlayer)
             return true;
         if (pursuit(x - 1, y,counter+ 1))
@@ -184,7 +175,6 @@ public class Beast extends Thread
             nextCell.add("down");
             return true;
         }
-        cells[x][y].makeMarked();
         return false;
     }
 
