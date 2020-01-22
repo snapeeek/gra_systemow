@@ -29,7 +29,7 @@ public class Graphics extends JFrame implements KeyListener
         textArea.setSize(DIM / 2, DIM / 2);
         textArea.setPreferredSize(new Dimension(60 * CELL_WIDTH, 30 * CELL_HEIGHT));
         textArea.setEditable(false);
-        textArea.setText("Witam serdecznie co sie dzieje\nskad to zwatpienie byku\npamietaj zeby ciagle isc do przodu, bo nikt za Ciebie tego nie zrobi B)");
+        //textArea.setText("Witam serdecznie co sie dzieje\nskad to zwatpienie byku\npamietaj zeby ciagle isc do przodu, bo nikt za Ciebie tego nie zrobi B)");
         board = new Board();
         board.addKeyListener(this);
 
@@ -154,6 +154,8 @@ public class Graphics extends JFrame implements KeyListener
                         if (cell[j].getOcup() == Cell.Ocup.BEAST)
                         {
                             g.setColor(Color.RED);
+                            g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
+                            g.setColor(Color.WHITE);
                             g.drawString("*", cell[j].x+3, cell[j].y + CELL_HEIGHT - 3);
                         }
                         else if (cell[j].getOcup() == Cell.Ocup.COIN)
@@ -235,6 +237,16 @@ public class Graphics extends JFrame implements KeyListener
                             g.setColor(Color.black);
                             g.drawString("T", cell[j].x, cell[j].y + CELL_HEIGHT - 3);
                             g.drawString("#", cell[j].x + 2, cell[j].y + CELL_HEIGHT - 3);
+                        }
+                        else if (cell[j].getOcup() == Cell.Ocup.BEAST)
+                        {
+                            g.setColor(Color.RED);
+                            g.fillRect(cell[j].x, cell[j].y, CELL_WIDTH, CELL_HEIGHT);
+                            g.setColor(Color.WHITE);
+                            g.drawString("*", cell[j].x+3, cell[j].y + CELL_HEIGHT - 3);
+                            g.setColor(Color.BLACK);
+                            g.drawString("#", cell[j].x + 2, cell[j].y + CELL_HEIGHT - 3);
+
                         }
                     }
                     else

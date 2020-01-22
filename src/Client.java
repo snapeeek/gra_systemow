@@ -111,6 +111,7 @@ public class Client extends Thread
                 {
                     executorService.shutdown();
                     e.printStackTrace();
+                    graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
                 }
 
             };

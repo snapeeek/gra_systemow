@@ -9,12 +9,12 @@ import java.io.ObjectInputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+
 
 public class Bot extends Thread
 {
@@ -23,7 +23,7 @@ public class Bot extends Thread
     final int PORT = 5005;
     final long period = 1000;
     Cell[][] cells;
-    Point location, start;
+    Point location, start, beastLoc;
     int death = 0, carried = 0, brought = 0;
     ScheduledExecutorService executorService;
 
@@ -83,9 +83,12 @@ public class Bot extends Thread
                 try
                 {
                     ArrayList<String> moves = checkMoves();
-                    SecureRandom random = new SecureRandom();
+                    Random random = new Random();
                     String msg;
-                    msg = moves.get(random.nextInt(moves.size()));
+                    if (isBeastVisible())
+                        msg = escape();
+                    else
+                        msg = moves.get(random.nextInt(moves.size()));
                     //lastDirection[0] = msg;
                     System.out.println(msg);
 
@@ -120,6 +123,7 @@ public class Bot extends Thread
                 {
                     executorService.shutdown();
                     e.printStackTrace();
+                    graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
                 }
 
             };
@@ -178,5 +182,74 @@ public class Bot extends Thread
         else
             return "nothing";
     }*/
+
+    boolean isBeastVisible()
+    {
+        for (int i = -2; i <= 2; i++)
+        {
+            for (int j = -2; j <= 2; j++)
+            {
+                if (location.x + i >= 0 && location.x + i < 60 && location.y + j >= 0 && location.y + j < 30
+                        && cells[location.x + i][location.y + j].getOcup() == Cell.Ocup.BEAST)
+                {
+                    beastLoc = new Point(location.x+i, location.y+j);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    boolean isBeastVisibleFromPoint(int x, int y)
+    {
+        for (int i = -2; i <= 2; i++)
+        {
+            for (int j = -2; j <= 2; j++)
+            {
+                if (x + i >= 0 && x + i < 60 && y + j >= 0 && y + j < 30
+                        && cells[x+i][y+j].getType() != Cell.Type.UNSEEN
+                        && cells[x + i][y + j].getOcup() == Cell.Ocup.BEAST)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    String escape()
+    {
+        ArrayList<String> help = checkMoves();
+        double dist = Math.sqrt(Math.pow((double)(beastLoc.x - location.x), 2.0) + Math.pow((double)(beastLoc.y - location.y), 2.0));
+        for (int i = 0; i < help.size(); i++)
+        {
+            double helpDist;
+            switch(help.get(i))
+            {
+                case "up":
+                    helpDist = Math.sqrt(Math.pow((double)(beastLoc.x - location.x), 2.0) + Math.pow((double)(beastLoc.y - (location.y - 1)), 2.0));
+                    if (helpDist > dist)
+                        return "up";
+                    break;
+                case "right":
+                    helpDist = Math.sqrt(Math.pow((double)(beastLoc.x - (location.x + 1)), 2.0) + Math.pow((double)(beastLoc.y - location.y), 2.0));
+                    if (helpDist > dist)
+                        return "right";
+                    break;
+                case "down":
+                    helpDist = Math.sqrt(Math.pow((double)(beastLoc.x - location.x), 2.0) + Math.pow((double)(beastLoc.y - (location.y + 1)), 2.0));
+                    if (helpDist > dist)
+                        return "down";
+                    break;
+                case "left":
+                    helpDist = Math.sqrt(Math.pow((double)(beastLoc.x - (location.x - 1)), 2.0) + Math.pow((double)(beastLoc.y - location.y), 2.0));
+                    if (helpDist > dist)
+                        return "left";
+                    break;
+            }
+        }
+        Random rand = new Random();
+        return help.get(rand.nextInt(help.size()));
+    }
 }
 

@@ -56,7 +56,7 @@ public class Server
 
             handler.start();
             handler1.start();
-            serverExec = Executors.newScheduledThreadPool(50);
+            serverExec = Executors.newScheduledThreadPool(10);
 
             Runnable check = () ->
             {
@@ -69,6 +69,22 @@ public class Server
                     addSth(Cell.Ocup.BIGT);
                 else if (com.equals("beast"))
                     addSth(Cell.Ocup.BEAST);
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("Gracz\tType\tCords\tStartPoint\tCarried\tBrought\tDeaths\n");
+                for (int i = 1 ; i <= playerCount.get(); i++)
+                {
+                    Handler help = players.get(i);
+                    StringBuilder cords = new StringBuilder();
+                    cords.append("(").append(help.location.x).append(",").append(help.location.y).append(")");
+                    StringBuilder startCords = new StringBuilder();
+                    startCords.append("(").append(help.start.x).append(",").append(help.start.y).append(")");
+                    sb.append(help.playerNumber).append("\t").append(help.type).append("\t").append(cords.toString()).append("\t").append(startCords.toString()).append("\t").append(help.carried).append("\t").append(help.brought).append("\t").append(help.deaths);
+
+                    sb.append("\n");
+                }
+
+                graphics.setTextArea(sb.toString());
 
                 try
                 {
@@ -251,7 +267,7 @@ public class Server
                             playerAction(moveMsg);
 
 
-                        if (hasChanged || ded)
+                        if (hasChanged || ded || (!hasChanged && type.equals("player")))
                         {
                             ded = false;
                             dos.writeUTF("mapa");
@@ -391,6 +407,11 @@ public class Server
                                         brought += carried;
                                         carried = 0;
                                     }
+                                    else if (cells[location.x][location.y - 1].getOcup() == Cell.Ocup.BEAST)
+                                    {
+                                        death();
+                                        break;
+                                    }
 
                                     cells[location.x][location.y - 1].setOcup(Cell.Ocup.PLAYER);
                                     cells[location.x][location.y - 1].setPlayerNum(playerNumber);
@@ -441,6 +462,11 @@ public class Server
                                     {
                                         brought += carried;
                                         carried = 0;
+                                    }
+                                    else if (cells[location.x + 1][location.y].getOcup() == Cell.Ocup.BEAST)
+                                    {
+                                        death();
+                                        break;
                                     }
 
                                     cells[location.x + 1][location.y].setOcup(Cell.Ocup.PLAYER);
@@ -493,6 +519,12 @@ public class Server
                                         brought += carried;
                                         carried = 0;
                                     }
+                                    else if (cells[location.x][location.y + 1].getOcup() == Cell.Ocup.BEAST)
+                                    {
+                                        death();
+                                        break;
+                                    }
+
                                     cells[location.x][location.y + 1].setOcup(Cell.Ocup.PLAYER);
                                     cells[location.x][location.y + 1].setPlayerNum(playerNumber);
                                 }
@@ -544,6 +576,11 @@ public class Server
                                     {
                                         brought += carried;
                                         carried = 0;
+                                    }
+                                    else if (cells[location.x - 1][location.y].getOcup() == Cell.Ocup.BEAST)
+                                    {
+                                        death();
+                                        break;
                                     }
 
                                     cells[location.x - 1][location.y].setOcup(Cell.Ocup.PLAYER);

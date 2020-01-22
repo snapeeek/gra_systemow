@@ -181,16 +181,16 @@ public class Beast extends Thread
     ArrayList<String> checkMoves()
     {
         ArrayList<String> possible = new ArrayList<>();
-        if (location.x - 1 >= 0 && cells[location.x-1][location.y].getType() != Cell.Type.WALL)
+        if (location.x - 1 >= 0 && cells[location.x-1][location.y].getType() != Cell.Type.WALL && cells[location.x-1][location.y].getOcup() != Cell.Ocup.BEAST)
             possible.add("left");
 
-        if (location.x + 1 < 60 && cells[location.x+1][location.y].getType() != Cell.Type.WALL)
+        if (location.x + 1 < 60 && cells[location.x+1][location.y].getType() != Cell.Type.WALL && cells[location.x+1][location.y].getOcup() != Cell.Ocup.BEAST)
             possible.add("right");
 
-        if (location.y - 1 >= 0 && cells[location.x][location.y-1].getType() != Cell.Type.WALL)
+        if (location.y - 1 >= 0 && cells[location.x][location.y-1].getType() != Cell.Type.WALL && cells[location.x][location.y + 1].getOcup() != Cell.Ocup.BEAST)
             possible.add("up");
 
-        if (location.y + 1 < 30 && cells[location.x][location.y+1].getType() != Cell.Type.WALL)
+        if (location.y + 1 < 30 && cells[location.x][location.y+1].getType() != Cell.Type.WALL && cells[location.x][location.y + 1].getOcup() != Cell.Ocup.BEAST)
             possible.add("down");
 
         return possible;
