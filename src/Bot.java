@@ -87,7 +87,12 @@ public class Bot extends Thread
                     if (isBeastVisible())
                         msg = escape();
                     else
-                        msg = moves.get(random.nextInt(moves.size()));
+                    {
+                        if (!moves.isEmpty())
+                            msg = moves.get(random.nextInt(moves.size()));
+                        else
+                            msg = "nothing";
+                    }
                     //lastDirection[0] = msg;
                     System.out.println(msg);
 
@@ -250,7 +255,7 @@ public class Bot extends Thread
             }
             if (!possible.isEmpty())
             {
-                return possible.get(rand.nextInt());
+                return possible.get(rand.nextInt(possible.size()));
             }
         }
 

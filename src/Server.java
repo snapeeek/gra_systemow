@@ -391,7 +391,7 @@ public class Server
                 switch (message)
                 {
                     case "up":
-                        if (location.y - 1 >= 0 && cells[location.x][location.y - 1].getType() == Cell.Type.PATH || cells[location.x][location.y - 1].getType() == Cell.Type.BUSHES && cells[location.x][location.y - 1].getOcup() == Cell.Ocup.NOTHING)
+                        if (location.y - 1 >= 0 && cells[location.x][location.y - 1].getType() == Cell.Type.PATH || cells[location.x][location.y - 1].getType() == Cell.Type.BUSHES)
                         {
                             if (cells[location.x][location.y-1].getOcup() == Cell.Ocup.PLAYER)
                             {

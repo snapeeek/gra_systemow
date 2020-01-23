@@ -72,7 +72,7 @@ public class Beast extends Thread
                     if (isPlayerVisible() && nextCell.isEmpty())
                     {
                         nextCell.clear();
-                        pursuit(location.x, location.y, 0);
+                        pursuit(location.x, location.y, 1);
                     }
 
                     possibleMoves = checkMoves();
@@ -84,7 +84,9 @@ public class Beast extends Thread
                     else
                     {
                         Random rand = new Random();
-                        finalDos.writeUTF(possibleMoves.get(rand.nextInt(possibleMoves.size())));
+                        if (!possibleMoves.isEmpty())
+                            finalDos.writeUTF(possibleMoves.get(rand.nextInt(possibleMoves.size())));
+                        else finalDos.writeUTF("nothing");
                     }
 
                     if (finalDis.readUTF().equals("mapa"))
