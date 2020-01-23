@@ -8,7 +8,6 @@ import java.io.ObjectInputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.Executors;
@@ -25,7 +24,6 @@ public class Beast extends Thread
     int hauntedPlayer = -1;
     ArrayList<String> nextCell = new ArrayList<>();
     ArrayList<String> possibleMoves;
-    String komunikat;
 
 
     @Override
@@ -56,7 +54,6 @@ public class Beast extends Thread
         try
         {
             assert dos != null;
-            assert dis != null;
             dos.writeUTF("beast");
 
 

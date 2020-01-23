@@ -61,7 +61,6 @@ public class Bot extends Thread
         try
         {
             assert dos != null;
-            assert dis != null;
             dos.writeUTF("bot");
 
 
@@ -200,7 +199,7 @@ public class Bot extends Thread
         return false;
     }
 
-    boolean isBeastVisibleFromPoint(int x, int y)
+    /*boolean isBeastVisibleFromPoint(int x, int y)
     {
         for (int i = -2; i <= 2; i++)
         {
@@ -215,40 +214,46 @@ public class Bot extends Thread
             }
         }
         return false;
-    }
+    }*/
     
     String escape()
     {
         ArrayList<String> help = checkMoves();
-        double dist = Math.sqrt(Math.pow((double)(beastLoc.x - location.x), 2.0) + Math.pow((double)(beastLoc.y - location.y), 2.0));
-        for (int i = 0; i < help.size(); i++)
+        double dist = Math.sqrt(Math.pow(beastLoc.x - location.x, 2.0) + Math.pow(beastLoc.y - location.y, 2.0));
+        Random rand = new Random();
+        for (String s : help)
         {
             double helpDist;
-            switch(help.get(i))
+            ArrayList<String> possible = new ArrayList<>();
+            switch (s)
             {
                 case "up":
-                    helpDist = Math.sqrt(Math.pow((double)(beastLoc.x - location.x), 2.0) + Math.pow((double)(beastLoc.y - (location.y - 1)), 2.0));
+                    helpDist = Math.sqrt(Math.pow(beastLoc.x - location.x, 2.0) + Math.pow(beastLoc.y - (location.y - 1), 2.0));
                     if (helpDist > dist)
-                        return "up";
+                        possible.add("up");
                     break;
                 case "right":
-                    helpDist = Math.sqrt(Math.pow((double)(beastLoc.x - (location.x + 1)), 2.0) + Math.pow((double)(beastLoc.y - location.y), 2.0));
+                    helpDist = Math.sqrt(Math.pow(beastLoc.x - (location.x + 1), 2.0) + Math.pow(beastLoc.y - location.y, 2.0));
                     if (helpDist > dist)
-                        return "right";
+                        possible.add("right");
                     break;
                 case "down":
-                    helpDist = Math.sqrt(Math.pow((double)(beastLoc.x - location.x), 2.0) + Math.pow((double)(beastLoc.y - (location.y + 1)), 2.0));
+                    helpDist = Math.sqrt(Math.pow(beastLoc.x - location.x, 2.0) + Math.pow(beastLoc.y - (location.y + 1), 2.0));
                     if (helpDist > dist)
-                        return "down";
+                        possible.add("down");
                     break;
                 case "left":
-                    helpDist = Math.sqrt(Math.pow((double)(beastLoc.x - (location.x - 1)), 2.0) + Math.pow((double)(beastLoc.y - location.y), 2.0));
+                    helpDist = Math.sqrt(Math.pow(beastLoc.x - (location.x - 1), 2.0) + Math.pow(beastLoc.y - location.y, 2.0));
                     if (helpDist > dist)
-                        return "left";
+                        possible.add("left");
                     break;
             }
+            if (!possible.isEmpty())
+            {
+                return possible.get(rand.nextInt());
+            }
         }
-        Random rand = new Random();
+
         return help.get(rand.nextInt(help.size()));
     }
 }

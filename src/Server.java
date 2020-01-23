@@ -61,26 +61,35 @@ public class Server
             Runnable check = () ->
             {
                 com = graphics.getCom();
-                if (com.equals("coin"))
-                    addSth(Cell.Ocup.COIN);
-                else if (com.equals("treas"))
-                    addSth(Cell.Ocup.TREAS);
-                else if (com.equals("bigt"))
-                    addSth(Cell.Ocup.BIGT);
-                else if (com.equals("beast"))
-                    addSth(Cell.Ocup.BEAST);
+                switch (com)
+                {
+                    case "coin":
+                        addSth(Cell.Ocup.COIN);
+                        break;
+                    case "treas":
+                        addSth(Cell.Ocup.TREAS);
+                        break;
+                    case "bigt":
+                        addSth(Cell.Ocup.BIGT);
+                        break;
+                    case "beast":
+                        addSth(Cell.Ocup.BEAST);
+                        break;
+                }
 
                 StringBuilder sb = new StringBuilder();
                 sb.append("Gracz\tType\tCords\tStartPoint\tCarried\tBrought\tDeaths\n");
-                for (int i = 1 ; i <= playerCount.get(); i++)
+                for (int i = 1 ; i <= 4; i++)
                 {
-                    Handler help = players.get(i);
-                    StringBuilder cords = new StringBuilder();
-                    cords.append("(").append(help.location.x).append(",").append(help.location.y).append(")");
-                    StringBuilder startCords = new StringBuilder();
-                    startCords.append("(").append(help.start.x).append(",").append(help.start.y).append(")");
-                    sb.append(help.playerNumber).append("\t").append(help.type).append("\t").append(cords.toString()).append("\t").append(startCords.toString()).append("\t").append(help.carried).append("\t").append(help.brought).append("\t").append(help.deaths);
-
+                    if (players.containsKey(i))
+                    {
+                        Handler help = players.get(i);
+                        sb.append(help.playerNumber).append("\t").append(help.type).append("\t").append("(").append(help.location.x).append(",").append(help.location.y).append(")").append("\t").append("(" + help.start.x + "," + help.start.y + ")").append("\t").append(help.carried).append("\t").append(help.brought).append("\t").append(help.deaths);
+                    }
+                    else
+                    {
+                        sb.append(i).append("\t").append("---").append("\t").append("---").append("\t").append("---").append("\t").append("---").append("\t").append("---").append("\t").append("---");
+                    }
                     sb.append("\n");
                 }
 
@@ -88,7 +97,7 @@ public class Server
 
                 try
                 {
-                    if (playerCount.get() < 4)
+                    if (players.size() < 4)
                     {
                         serverSocket.setSoTimeout(50);
                         Socket sock = serverSocket.accept();
@@ -100,10 +109,10 @@ public class Server
                     }
                 } catch (SocketException e)
                 {
-
+                    System.out.println("Co jest kurwa");
                 }catch (SocketTimeoutException e)
                 {
-                    //System.out.println("well ye, noone connected");
+                    System.out.println("well ye, noone connected");
                 }
                 catch (IOException e)
                 {
@@ -176,7 +185,7 @@ public class Server
         boolean hasChanged = false;
         boolean inBushes = false;
         int bushesTime = 0;
-        ScheduledExecutorService executorService = null;
+        ScheduledExecutorService executorService;
         boolean ded = false;
         Point deathLoc = null;
 
@@ -190,7 +199,7 @@ public class Server
                 isPlayingOps.tryAcquire();
                 for (int i = 0; i < isPlaying.length; i++)
                 {
-                    if (isPlaying[i] == false)
+                    if (!isPlaying[i])
                     {
                         playerNumber = i + 1;
                         isPlaying[i] = true;
@@ -249,11 +258,12 @@ public class Server
                             isPlaying[playerNumber - 1] = false;
                             isPlayingOps.release();
                             players.remove(playerNumber);
-                            if (playerCount.addAndGet(-1) == 0)
+                            playerCount.addAndGet(-1);
+                            if (playerCount.get() <= 0)
                             {
+                                serverExec.shutdown();
                                 System.out.println("Koniec gry");
                                 graphics.dispatchEvent(new WindowEvent(graphics, WindowEvent.WINDOW_CLOSING));
-                                serverExec.shutdown();
                             }
                             cellsOps.tryAcquire();
                             cells[location.x][location.y].setOcup(Cell.Ocup.NOTHING);
@@ -267,7 +277,7 @@ public class Server
                             playerAction(moveMsg);
 
 
-                        if (hasChanged || ded || (!hasChanged && type.equals("player")))
+                        if (hasChanged || ded || type.equals("player"))
                         {
                             ded = false;
                             dos.writeUTF("mapa");
@@ -295,7 +305,13 @@ public class Server
                         }
                         //dis.reset();
                         dos.flush();
-                    } catch (IOException e)
+                    }
+                    catch (EOFException e)
+                    {
+                        System.out.println(type);
+                        e.printStackTrace();
+                    }
+                    catch (IOException e)
                     {
                         e.printStackTrace();
                         System.out.println("FORCE EXIT. SERVBR IS SHUTTING DOWN");
